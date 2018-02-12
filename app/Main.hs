@@ -3,12 +3,13 @@ import qualified Brick as B
 import Brick.BChan (newBChan, writeBChan)
 import qualified Graphics.Vty as V
 
-import Screen
+import Text
+import State
 import Handler
 import Drawer
 
 main = do
-    let s = emptyScreenZipper
+    let s = newScreenState
     chan <- newBChan 10
     void $ B.customMain (V.mkVty V.defaultConfig) (Just chan) app s
 
