@@ -1,4 +1,4 @@
-module Text
+module TextZipper
 (   Line,
     Text,
     TextZipper,

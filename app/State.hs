@@ -4,7 +4,7 @@ module State
     getName
 ) where
 
-import Text
+import TextZipper
 
 data State = State 
    { text :: TextZipper,

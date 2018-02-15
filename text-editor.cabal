@@ -51,6 +51,7 @@ executable text-editor-exe
     , microlens-th
     , random
     , vty
+    , word-wrap
   other-modules:
       Paths_text_editor
   default-language: Haskell2010
