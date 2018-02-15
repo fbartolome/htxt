@@ -1,6 +1,6 @@
 module Handler
 (   Name,
-    Tick,
+    Tick (..),
     eventHandler
 ) where
 
@@ -22,6 +22,7 @@ eventHandler s (VtyEvent (V.EvKey V.KDown [])) = continue $ modifyText s moveDow
 eventHandler s (VtyEvent (V.EvKey V.KLeft [])) = continue $ modifyText s moveLeft
 eventHandler s (VtyEvent (V.EvKey V.KRight [])) = continue $ modifyText s moveRight
 eventHandler s (VtyEvent (V.EvKey V.KEsc [])) = halt s
+eventHandler s (AppEvent Tick) = continue s
 eventHandler s _ = continue s
 
 modifyText :: State -> (TextZipper -> TextZipper) -> State
