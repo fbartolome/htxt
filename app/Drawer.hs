@@ -2,14 +2,11 @@ module Drawer
 (   drawUI
 ) where
 
+import Data.Maybe
 import qualified Brick as B
 import Brick.Widgets.Border
-import Text.Wrap
 import qualified Brick.Widgets.Center as C
-import qualified Brick.Widgets.Core as WC
 import qualified Brick.Widgets.Border.Style as BS
-import qualified Brick.Widgets.List as WL
-
 import TextZipper
 import State
 import Style
@@ -22,7 +19,19 @@ drawTextBox s =  B.withBorderStyle BS.defaultBorderStyle
   $ borderWithLabel (B.str $ " " ++ getName s ++ " ") 
   $ B.padBottom (B.Max)
   $ B.padRight (B.Max)
-  $ drawText $ toString $ text s
+  $ B.vBox $ drawText $ toText $ text s
 
-drawText :: String -> B.Widget ()
-drawText s = B.str s
+drawText :: Text -> [B.Widget ()]
+drawText = map (\x -> B.hBox $ drawLine x)
+
+drawLine :: Line -> [B.Widget ()]
+drawLine = foldr (\c h -> (drawChar c):h) [B.str " "] where
+    drawChar sc
+        | style sc == Nothing = B.str [char sc]
+        | otherwise = B.withAttr (fromJust $ style sc) $ B.str [char sc]
+
+-- drawLine [] = [B.str " "]
+-- drawLine l = map drawChar l where
+--     drawChar sc
+--         | style sc == Nothing = B.str [char sc]
+--         | otherwise = B.withAttr (fromJust $ style sc) $ B.str [char sc]

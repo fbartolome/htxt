@@ -2,6 +2,7 @@ module TextZipper
 (   Line,
     Text,
     TextZipper,
+    StyleChar (..),
     emptyTextZipper,
     moveLeft,
     moveRight,
@@ -15,25 +16,32 @@ module TextZipper
     newStr,
     newLine,
     delete,
-    toString,
+    toText,
     position,
     (-:)
 ) where
 
-type Line = String
-type Text = [Line]
+import Brick
+import Style
 
+data StyleChar = StyleChar
+   { char :: Char,
+     style :: Maybe AttrName
+   }
+
+type Line = [StyleChar]
+type Text = [Line]
 type TextZipper = (Line, Line, [Line], [Line])
 
-emptyTextZipper = ("", "", [], [])
+emptyTextZipper = ([], [], [], [])
 
 moveLeft :: TextZipper -> TextZipper
-moveLeft ("", liner, u:us, ds) = (u, "", us, liner:ds)
+moveLeft ([], liner, u:us, ds) = (u, [], us, liner:ds)
 moveLeft (c:linel, liner, us, ds) = (linel, c:liner, us, ds)
 moveLeft tz = tz
 
 moveRight :: TextZipper -> TextZipper
-moveRight (linel, "", us, d:ds) = ("", d, linel:us, ds)
+moveRight (linel, [], us, d:ds) = ([], d, linel:us, ds)
 moveRight (linel, c:liner, us, ds) = (c:linel, liner, us, ds)
 moveRight tz = tz
 
@@ -48,10 +56,10 @@ moveDown (linel, liner, us, d:ds) = (reverse firstPart, lastPart, (reverse liner
 moveDown tz = tz
 
 moveToLineStart :: TextZipper -> TextZipper
-moveToLineStart (linel, liner, us, ds) = ("", reverse linel ++ liner, us, ds)
+moveToLineStart (linel, liner, us, ds) = ([], reverse linel ++ liner, us, ds)
 
 moveToLineEnd :: TextZipper -> TextZipper
-moveToLineEnd (linel, liner, us, ds) = (reverse liner ++ linel, "", us, ds)
+moveToLineEnd (linel, liner, us, ds) = (reverse liner ++ linel, [], us, ds)
 
 moveToScreenTop :: TextZipper -> TextZipper
 moveToScreenTop (linel, liner, [], ds) = (linel, liner, [], ds)
@@ -68,25 +76,25 @@ moveToScreenEnd :: TextZipper -> TextZipper
 moveToScreenEnd tz = moveToScreenBottom $ moveToLineEnd tz
 
 newChar :: Char -> TextZipper -> TextZipper
-newChar c (linel, liner, us, ds) = (c:linel, liner, us, ds)
 newChar '\n' tz = newLine tz
+newChar c (linel, liner, us, ds) = ((StyleChar c Nothing):linel, liner, us, ds)
 
 newStr :: String -> TextZipper -> TextZipper
 newStr str tz = foldl (\h c-> newChar c h) tz str
 
 newLine :: TextZipper -> TextZipper
-newLine (linel, liner, us, ds) = ("", liner, linel:us, ds)
+newLine (linel, liner, us, ds) = ([], liner, linel:us, ds)
 
 delete :: TextZipper -> TextZipper
-delete ("", liner, u:us, ds) = (u, liner, us, ds)
+delete ([], liner, u:us, ds) = (u, liner, us, ds)
 delete (l:linel, liner, us, ds) = (linel, liner, us, ds)
 delete tz = tz
 
-restOfTextToString :: TextZipper -> String
-restOfTextToString (_, liner, _, ds) = foldr (\s h -> s ++ "\n" ++ h) "" $ liner:ds
+restOfText :: TextZipper -> Text
+restOfText (_, liner, _, ds) = liner:ds
 
-toString :: TextZipper -> String
-toString tz = restOfTextToString $ moveToScreenStart tz
+toText :: TextZipper -> Text
+toText tz = restOfText $ moveToScreenStart tz
 
 position :: TextZipper -> (Int,Int)
 position (linel, _, us, _) = (length us, length linel)
