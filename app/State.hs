@@ -1,22 +1,27 @@
 module State
-(   State (..),
-    newScreenState,
-    getName
-) where
+  ( State (..),
+    StyleChar (..),
+    State.empty,
+    getFilename
+  ) where
 
-import TextZipper
+import Brick
 
-data State = State 
-   { text :: TextZipper,
-     name :: Maybe String,
-     cursorTilt :: Bool
-   }
+import           Cursor
 
-noName = "This file has no name"
+data StyleChar = StyleChar
+  { char  :: Char,
+    style :: Maybe AttrName
+  }
 
-newScreenState :: State
-newScreenState = State {text = emptyTextZipper, name = Nothing, cursorTilt = False}
+data State = State
+  { text     :: Cursor StyleChar,
+    filename :: Maybe String
+  }
 
-getName :: State -> String
-getName (State _ Nothing _) = noName
-getName (State _ (Just n) _) = n
+empty :: State
+empty = State {text = Cursor.empty, filename = Nothing}
+
+getFilename :: State -> String
+getFilename (State _ Nothing)  = "*Unsaved file*"
+getFilename (State _ (Just n)) = n
