@@ -52,6 +52,7 @@ executable text-editor-exe
     , random
     , vty
     , word-wrap
+    , split
   other-modules:
       Paths_text_editor
   default-language: Haskell2010
