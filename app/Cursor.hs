@@ -27,34 +27,39 @@ module Cursor
 
 import           Prelude hiding (Left, Right)
 
-data Direction = Left | Right deriving (Show)
+data Direction = Left
+               | Right
+               deriving (Show)
 
-data Selection a
-  = SL -- Single line
-    { line      :: [a]
-    , direction :: Direction
-    }
-  | ML -- Multi line
-    { firstLine    :: [a]
-    , linesBetween :: [[a]]
-    , lastLine     :: [a]
-    , direction    :: Direction
-    } deriving (Show)
+data Selection a = SL -- Single line
+                   { line      :: [a]
+                   , direction :: Direction
+                   }
+                 | ML -- Multi line
+                   { firstLine    :: [a]
+                   , linesBetween :: [[a]]
+                   , lastLine     :: [a]
+                   , direction    :: Direction
+                   }
+                 deriving (Show)
 
 data Cursor a = Cursor
-  { left      :: [a]
-  , right     :: [a]
-  , up        :: [[a]]
-  , down      :: [[a]]
-  , selection :: Maybe (Selection a)
-  } deriving (Show)
+                { left      :: [a]
+                , right     :: [a]
+                , up        :: [[a]]
+                , down      :: [[a]]
+                , selection :: Maybe (Selection a)
+                }
+              deriving (Show)
 
 empty :: Cursor a
 empty = Cursor [] [] [] [] Nothing
 
-insert :: Cursor a -> a -> Cursor a
-insert (Cursor ls rs us ds Nothing) e  = Cursor (e:ls) rs us ds Nothing
-insert (Cursor ls rs us ds (Just s)) e = insert (Cursor ls rs us ds Nothing) e
+-- Content
+
+insert :: a -> Cursor a -> Cursor a
+insert e (Cursor ls rs us ds Nothing)  = Cursor (e:ls) rs us ds Nothing
+insert e (Cursor ls rs us ds (Just s)) = insert e (Cursor ls rs us ds Nothing)
 
 insertLine :: Cursor a -> Cursor a
 insertLine (Cursor ls rs us ds Nothing)  = Cursor [] rs (ls:us) ds Nothing
@@ -161,9 +166,10 @@ mapUnselected f (Cursor ls rs us ds s) = Cursor (map f ls) (map f rs) (map (map 
 
 -- Properties
 
--- TODO ver q onda con algo seleccionado
 getCurrentPosition :: Cursor a -> (Int, Int)
-getCurrentPosition (Cursor ls _ us _ Nothing) = (length us, length ls)
+getCurrentPosition (Cursor ls _ us _ (Just (SL ss Right)))       = (length ls + length ss, length us)
+getCurrentPosition (Cursor _ _ us _ (Just (ML _ sls sds Right))) = (length sds, length us + length sls + 1)
+getCurrentPosition (Cursor ls _ us _ _)                          = (length ls, length us)
 
 getLines :: Cursor a -> [[a]]
 getLines c = restOfLines $ moveToScreenStart c
