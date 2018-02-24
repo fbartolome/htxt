@@ -12,9 +12,9 @@ import           State
 import           Style
 
 eventHandler :: State -> BrickEvent UIResource UIEvent -> EventM UIResource (Next State)
-eventHandler s (VtyEvent (V.EvKey V.KBS []))            = continue $ modifyText delete $ handleUndo s
-eventHandler s (VtyEvent (V.EvKey V.KEnter []))         = continue $ modifyText insertLine $ handleUndo s
-eventHandler s (VtyEvent (V.EvKey (V.KChar c) []))      = continue $ modifyText (handleChar c) $ handleUndo s
+eventHandler s (VtyEvent (V.EvKey V.KBS []))            = continue $ modifyText delete $ pushUndo s
+eventHandler s (VtyEvent (V.EvKey V.KEnter []))         = continue $ modifyText insertLine $ pushUndo s
+eventHandler s (VtyEvent (V.EvKey (V.KChar c) []))      = continue $ modifyText (handleChar c) $ pushUndo s
 eventHandler s (VtyEvent (V.EvKey V.KUp []))            = continue $ modifyText moveUp s
 eventHandler s (VtyEvent (V.EvKey V.KDown []))          = continue $ modifyText moveDown s
 eventHandler s (VtyEvent (V.EvKey V.KLeft []))          = continue $ modifyText moveLeft s
@@ -39,8 +39,3 @@ handleChar ch c = insert (StyleChar ch Nothing) c
 
 resize :: State -> Int -> Int -> State
 resize s rows cols = s {terminalSize = (rows, cols)}
-
-handleUndo :: State -> State
-handleUndo s = s {undoText = t:us, redoText = []} where
-  t = text s
-  us = undoText s

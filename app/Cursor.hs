@@ -57,10 +57,12 @@ empty = Cursor [] [] [] [] Nothing
 
 -- Content
 
+-- FIXME cual es la diferencia entre los dos casos? se puede hacer en uno solo?
 insert :: a -> Cursor a -> Cursor a
 insert e (Cursor ls rs us ds Nothing)  = Cursor (e:ls) rs us ds Nothing
 insert e (Cursor ls rs us ds (Just s)) = insert e (Cursor ls rs us ds Nothing)
 
+-- FIXME idem insert
 insertLine :: Cursor a -> Cursor a
 insertLine (Cursor ls rs us ds Nothing)  = Cursor [] rs (ls:us) ds Nothing
 insertLine (Cursor ls rs us ds (Just s)) = insertLine (Cursor ls rs us ds Nothing)
