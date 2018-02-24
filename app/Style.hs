@@ -11,7 +11,10 @@ import Graphics.Vty
 tiltOn :: AttrName
 tiltOn = attrName "tiltOn"
 
+search :: AttrName
+search = attrName "search"
+
 -- Map
 
 theMap :: AttrMap
-theMap = attrMap defAttr [(tiltOn, bg magenta)]
+theMap = attrMap defAttr [(tiltOn, bg magenta), (search, black `on` yellow)]

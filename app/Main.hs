@@ -1,25 +1,26 @@
 import qualified Brick         as B
-import           Brick.BChan   (newBChan, writeBChan)
+import           Brick.BChan   (newBChan)
 import           Control.Monad
 import qualified Graphics.Vty  as V
 
+import           Application
 import           Cursor
 import           Drawer
 import           Handler
-import           State as S
+import           State         as S
+import           Style
 
+main :: IO ()
 main = do
-    let ss = S.empty
-    chan <- newBChan 10
-    void $ B.customMain (V.mkVty V.defaultConfig) (Just chan) app ss
+  let initState = S.empty
+  eventChan <- newBChan 10
+  void $ B.customMain (V.mkVty V.defaultConfig) (Just eventChan) app initState
 
--- TODO: ver bien cuales son los atributos default para la App
-app = B.App { B.appDraw = drawUI
-            , B.appChooseCursor = B.neverShowCursor
-            , B.appHandleEvent = eventHandler
-            , B.appStartEvent = return
-            , B.appAttrMap = const theMap
-            }
-
-theMap :: B.AttrMap
-theMap = B.attrMap V.defAttr []
+app :: B.App State UIEvent UIResource
+app = B.App
+      { B.appDraw = drawUI
+      , B.appChooseCursor = B.showFirstCursor
+      , B.appHandleEvent = eventHandler
+      , B.appStartEvent = return
+      , B.appAttrMap = const theMap
+      }
