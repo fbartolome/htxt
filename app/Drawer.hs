@@ -16,14 +16,14 @@ import           State
 import           Style
 
 drawUI :: State -> [B.Widget UIResource]
-drawUI s = [drawTextBox s]
+drawUI s = [drawBoxes s]
+
+drawBoxes :: State -> B.Widget UIResource
+drawBoxes s = B.vBox [drawTextBox s, drawBottomBox s]
 
 drawTextBox :: State -> B.Widget UIResource
 drawTextBox s = B.showCursor EditorCursor (B.Location (addOne $ (getCurrentPosition (text s))))
-  $ B.withBorderStyle BS.defaultBorderStyle
   $ borderWithLabel (B.str $ " " ++ getFilename s ++ " ")
-  $ B.padBottom (B.Max)
-  $ B.padRight (B.Max)
   $ B.viewport EditorViewpoint B.Both
   $ B.vBox $ drawText $ adaptText s
 
@@ -47,3 +47,16 @@ adaptSize s (rows, cols) = foldr (\line h -> (changeEmptyLine (chunksOf (rows-2)
 
 addOne :: (Int, Int) -> (Int, Int)
 addOne (x, y) = (x + 1, y + 1)
+
+-- Bottom box
+
+defaultBottomBoxText :: String
+defaultBottomBoxText = "Search: CTRL-F"
+
+drawBottomBox :: State -> B.Widget UIResource
+drawBottomBox s =
+  B.vLimit 3
+  $ border
+  $ B.padRight (B.Max)
+  $ C.center
+  $ B.str defaultBottomBoxText
