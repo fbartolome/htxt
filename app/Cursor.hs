@@ -1,5 +1,5 @@
 module Cursor
-  ( Cursor
+  ( Cursor (..)
   , Selection
   , Direction
   , empty
@@ -87,14 +87,12 @@ moveRight (Cursor ls (r:rs) us ds Nothing) = Cursor (r:ls) rs us ds Nothing
 moveRight (Cursor ls rs us ds (Just s))    = moveToSelectionEnd (Cursor ls rs us ds (Just s))
 moveRight c                                = c
 
---TODO tener en cuenta tamaño de la terminal
 moveUp :: Cursor a -> Cursor a
 moveUp (Cursor ls rs [] ds s)           = moveToLineStart (Cursor ls rs [] ds s)
 moveUp (Cursor ls rs (u:us) ds Nothing) = Cursor firstPart (reverse lastPart) us ((reverse ls ++ rs):ds) Nothing where
   (lastPart, firstPart) = splitAt (length u - length ls) u
 moveUp (Cursor ls rs us ds (Just s))    = moveUp $ moveToSelectionStart (Cursor ls rs us ds (Just s))
 
---TODO tener en cuenta tamaño de la terminal
 moveDown :: Cursor a -> Cursor a
 moveDown (Cursor ls rs us [] Nothing)     = moveToLineEnd (Cursor ls rs us [] Nothing)
 moveDown (Cursor ls rs us (d:ds) Nothing) = Cursor (reverse firstPart) lastPart ((reverse rs ++ ls):us) ds Nothing where

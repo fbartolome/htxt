@@ -22,8 +22,8 @@ eventHandlerInsertMode :: State -> BrickEvent UIResource UIEvent -> EventM UIRes
 eventHandlerInsertMode s (VtyEvent (V.EvKey V.KBS []))            = continue $ modifyText delete $ pushUndo s
 eventHandlerInsertMode s (VtyEvent (V.EvKey V.KEnter []))         = continue $ modifyText insertLine $ pushUndo s
 eventHandlerInsertMode s (VtyEvent (V.EvKey (V.KChar c) []))      = continue $ modifyText (handleChar c) $ pushUndo s
-eventHandlerInsertMode s (VtyEvent (V.EvKey V.KUp []))            = continue $ modifyText moveUp s
-eventHandlerInsertMode s (VtyEvent (V.EvKey V.KDown []))          = continue $ modifyText moveDown s
+eventHandlerInsertMode s (VtyEvent (V.EvKey V.KUp []))            = continue $ handleMoveUp s
+eventHandlerInsertMode s (VtyEvent (V.EvKey V.KDown []))          = continue $ handleMoveDown s
 eventHandlerInsertMode s (VtyEvent (V.EvKey V.KLeft []))          = continue $ modifyText moveLeft s
 eventHandlerInsertMode s (VtyEvent (V.EvKey V.KLeft [V.MShift]))  = continue $ modifyText selectLeft s
 eventHandlerInsertMode s (VtyEvent (V.EvKey V.KRight []))         = continue $ modifyText moveRight s
@@ -45,3 +45,28 @@ handleChar ch c = insert (StyleChar ch Nothing) c
 
 resize :: State -> Int -> Int -> State
 resize s rows cols = s {terminalSize = (rows, cols)}
+
+handleMoveDown :: State -> State
+handleMoveDown s
+  | rightOnCursor > terminalLength = foldr (\n h -> modifyText moveRight h) s [1..terminalLength]
+  | length (down $ text s) == 0 = modifyText moveToLineEnd s
+  | rightOnCursor > rightOnTerminal = modifyText moveToLineEnd s
+  | otherwise = foldr (\n h -> modifyText moveRight h) (modifyText (moveDown . moveToLineStart) s) [1..movingCharsFromLeft]
+  where terminalLength = ((fst $ terminalSize s)-2)
+        rightOnCursor = (length $ right $ text s)
+        leftOnTerminal = (length $ left $ text s) `mod` terminalLength
+        rightOnTerminal = terminalLength - leftOnTerminal
+        movingCharsFromLeft = min leftOnTerminal (length $ head $ down $ text s)
+
+handleMoveUp :: State -> State
+handleMoveUp s
+  | leftOnCursor > terminalLength = foldr (\n h -> modifyText moveLeft h) s [1..terminalLength]
+  | length (up $ text s) == 0 = modifyText moveToLineStart s
+  | leftOnCursor > upLineTerminalLength = modifyText (moveUp . moveToLineEnd) s
+  | otherwise = foldr (\n h -> modifyText moveRight h) (modifyText (moveUp . moveToLineStart) s) [1..movingCharsFromLeft]
+  where terminalLength = ((fst $ terminalSize s)-2)
+        leftOnCursor = (length $ left $ text s)
+        leftOnTerminal = (length $ left $ text s) `mod` terminalLength
+        upLineCursorLength = (length $ head $ up $ text s)
+        upLineTerminalLength = upLineCursorLength `mod` terminalLength
+        movingCharsFromLeft = (upLineCursorLength `quot` terminalLength) * terminalLength + leftOnTerminal
