@@ -5,6 +5,7 @@ module Handler
 
 import           Brick
 import qualified Graphics.Vty as V
+import           Data.Maybe
 
 import           Application
 import           Cursor
@@ -48,6 +49,7 @@ resize s rows cols = s {terminalSize = (rows, cols)}
 
 handleMoveDown :: State -> State
 handleMoveDown s
+  | isJust (selection $ text s) = handleMoveDown $ modifyText moveRight s
   | rightOnCursor > terminalLength = foldr (\n h -> modifyText moveRight h) s [1..terminalLength]
   | length (down $ text s) == 0 = modifyText moveToLineEnd s
   | rightOnCursor > rightOnTerminal = modifyText moveToLineEnd s
@@ -60,9 +62,10 @@ handleMoveDown s
 
 handleMoveUp :: State -> State
 handleMoveUp s
+  | isJust (selection $ text s) = handleMoveUp $ modifyText moveLeft s
   | leftOnCursor > terminalLength = foldr (\n h -> modifyText moveLeft h) s [1..terminalLength]
   | length (up $ text s) == 0 = modifyText moveToLineStart s
-  | leftOnCursor > upLineTerminalLength = modifyText (moveUp . moveToLineEnd) s
+  | leftOnCursor > upLineTerminalLength = modifyText (moveToLineEnd . moveUp) s
   | otherwise = foldr (\n h -> modifyText moveRight h) (modifyText (moveUp . moveToLineStart) s) [1..movingCharsFromLeft]
   where terminalLength = ((fst $ terminalSize s)-2)
         leftOnCursor = (length $ left $ text s)
