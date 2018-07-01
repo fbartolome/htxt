@@ -33,6 +33,8 @@ eventHandlerInsertMode s (VtyEvent (V.EvKey (V.KChar 'x') [V.MCtrl])) = continue
 eventHandlerInsertMode s (VtyEvent (V.EvResize rows cols))        = continue $ resize s rows cols
 eventHandlerInsertMode s (VtyEvent (V.EvKey V.KDown [V.MShift]))  = vScrollBy (viewportScroll EditorViewpoint) 1 >> continue s
 eventHandlerInsertMode s (VtyEvent (V.EvKey V.KUp   [V.MShift]))  = vScrollBy (viewportScroll EditorViewpoint) (-1) >> continue s
+eventHandlerInsertMode s (VtyEvent (V.EvKey V.KDown [V.MCtrl, V.MShift])) = continue $ modifyText moveLinesWithSelectionDown s
+eventHandlerInsertMode s (VtyEvent (V.EvKey V.KUp   [V.MCtrl, V.MShift])) = continue $ modifyText moveLinesWithSelectionUp s
 eventHandlerInsertMode s _                                        = continue s
 
 modifyText :: (Cursor StyleChar -> Cursor StyleChar) -> State -> State
