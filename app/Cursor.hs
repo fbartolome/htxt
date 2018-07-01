@@ -5,7 +5,10 @@ module Cursor
   , empty
   , insert
   , insertLine
-  , delete
+  , deleteLeft
+  , deleteRight
+  , moveLinesWithSelectionUp
+  , moveLinesWithSelectionDown
   , moveLeft
   , moveRight
   , moveUp
@@ -16,8 +19,8 @@ module Cursor
   , moveToScreenBottom
   , moveToScreenStart
   , moveToScreenEnd
-  , selectRight
   , selectLeft
+  , selectRight
   , mapSelected
   , mapUnselected
   , getCurrentPosition
@@ -57,21 +60,31 @@ empty = Cursor [] [] [] [] Nothing
 
 -- Content
 
--- FIXME cual es la diferencia entre los dos casos? se puede hacer en uno solo?
 insert :: a -> Cursor a -> Cursor a
-insert e (Cursor ls rs us ds Nothing)  = Cursor (e:ls) rs us ds Nothing
-insert e (Cursor ls rs us ds (Just s)) = insert e (Cursor ls rs us ds Nothing)
+insert e (Cursor ls rs us ds _)  = Cursor (e:ls) rs us ds Nothing
 
--- FIXME idem insert
 insertLine :: Cursor a -> Cursor a
-insertLine (Cursor ls rs us ds Nothing)  = Cursor [] rs (ls:us) ds Nothing
-insertLine (Cursor ls rs us ds (Just s)) = insertLine (Cursor ls rs us ds Nothing)
+insertLine (Cursor ls rs us ds _)  = Cursor [] rs (ls:us) ds Nothing
 
-delete :: Cursor a -> Cursor a
-delete (Cursor (l:ls) rs us ds Nothing) = Cursor ls rs us ds Nothing
-delete (Cursor [] rs (u:us) ds Nothing) = Cursor u rs us ds Nothing
-delete (Cursor ls rs us ds (Just s))    = Cursor ls rs us ds Nothing
-delete c                                = c
+deleteLeft :: Cursor a -> Cursor a
+deleteLeft (Cursor (l:ls) rs us ds Nothing) = Cursor ls rs us ds Nothing
+deleteLeft (Cursor [] rs (u:us) ds Nothing) = Cursor u rs us ds Nothing
+deleteLeft (Cursor ls rs us ds (Just s))    = Cursor ls rs us ds Nothing
+deleteLeft c                                = c
+
+deleteRight :: Cursor a -> Cursor a
+deleteRight (Cursor ls (r:rs) us ds Nothing) = Cursor ls rs us ds Nothing
+deleteRight (Cursor ls [] us (d:ds) Nothing) = Cursor ls d us ds Nothing
+deleteRight (Cursor ls rs us ds (Just s))    = Cursor ls rs us ds Nothing
+deleteRight c                                = c
+
+moveLinesWithSelectionUp :: Cursor a -> Cursor a
+moveLinesWithSelectionUp (Cursor ls rs (u:us) ds s) = Cursor ls rs us ((reverse u):ds) s
+moveLinesWithSelectionUp c                          = c
+
+moveLinesWithSelectionDown :: Cursor a -> Cursor a
+moveLinesWithSelectionDown (Cursor ls rs us (d:ds) s) = Cursor ls rs ((reverse d):us) ds s
+moveLinesWithSelectionDown c                          = c
 
 -- Navigation
 
@@ -126,23 +139,8 @@ moveToScreenEnd c = moveToScreenBottom $ moveToLineEnd c
 -- Selection
 
 -- TODO ver si se puede sacar Maybe y reemplazarlo por SL vacio
-selectRight :: Cursor a -> Cursor a
-selectRight (Cursor ls [] us (d:ds) Nothing)                       = Cursor [] d (ls:us) ds (Just (ML [] [] [] Right))
-selectRight (Cursor ls (r:rs) us ds Nothing)                       = Cursor ls rs us ds (Just (SL [r] Right))
-selectRight (Cursor ls [] us (d:ds) (Just (SL ss Right)))          = Cursor ls d us ds (Just (ML ss [] [] Right))
-selectRight (Cursor ls (r:rs) us ds (Just (SL ss Right)))          = Cursor ls rs us ds (Just (SL (r:ss) Right))
-selectRight (Cursor ls [] us (d:ds) (Just (ML sus sls sds Right))) = Cursor ls d us ds (Just (ML sus (sds:sls) [] Right))
-selectRight (Cursor ls (r:rs) us ds (Just (ML sus sls sds Right))) = Cursor ls rs us ds (Just (ML sus sls (r:sds) Right))
-selectRight (Cursor ls rs us ds (Just (SL [s] Left)))              = Cursor (s:ls) rs us ds Nothing
-selectRight (Cursor ls rs us ds (Just (SL (s:ss) Left)))           = Cursor (s:ls) rs us ds (Just (SL ss Left))
-selectRight (Cursor ls rs us (d:ds) (Just (ML [] [] [] Left)))     = Cursor [] d (ls:us) ds Nothing
-selectRight (Cursor ls rs us ds (Just (ML [] [] sds Left)))        = Cursor [] rs (ls:us) ds (Just (SL sds Left))
-selectRight (Cursor ls rs us ds (Just (ML [] (sl:sls) sds Left)))  = Cursor [] rs (ls:us) ds (Just (ML sl sls sds Left))
-selectRight (Cursor ls rs us ds (Just (ML (su:sus) sls sds Left))) = Cursor (su:ls) rs us ds (Just (ML sus sls sds Left))
-selectRight c                                                      = c
-
 selectLeft :: Cursor a -> Cursor a
-selectLeft (Cursor [] rs (u:us) ds Nothing)                        = Cursor u [] us (rs:ds) (Just (ML [] [] [] Left))
+selectLeft (Cursor [] rs (u:us) ds Nothing)                        = Cursor u rs us ds (Just (ML [] [] [] Left))
 selectLeft (Cursor (l:ls) rs us ds Nothing)                        = Cursor ls rs us ds (Just (SL [l] Left))
 selectLeft (Cursor [] rs (u:us) ds (Just (SL ss Left)))            = Cursor u rs us ds (Just (ML [] [] ss Left))
 selectLeft (Cursor (l:ls) rs us ds (Just (SL ss Left)))            = Cursor ls rs us ds (Just (SL (l:ss) Left))
@@ -156,12 +154,32 @@ selectLeft (Cursor ls rs us ds (Just (ML sus (sl:sls) [] Right)))  = Cursor ls [
 selectLeft (Cursor ls rs us ds (Just (ML sus sls (sd:sds) Right))) = Cursor ls (sd:rs) us ds (Just (ML sus sls sds Right))
 selectLeft c                                                       = c
 
-mapSelected :: (a -> a)  -> Cursor a -> Cursor a
+selectRight :: Cursor a -> Cursor a
+selectRight (Cursor ls [] us (d:ds) Nothing)                       = Cursor ls d us ds (Just (ML [] [] [] Right))
+selectRight (Cursor ls (r:rs) us ds Nothing)                       = Cursor ls rs us ds (Just (SL [r] Right))
+selectRight (Cursor ls [] us (d:ds) (Just (SL ss Right)))          = Cursor ls d us ds (Just (ML ss [] [] Right))
+selectRight (Cursor ls (r:rs) us ds (Just (SL ss Right)))          = Cursor ls rs us ds (Just (SL (r:ss) Right))
+selectRight (Cursor ls [] us (d:ds) (Just (ML sus sls sds Right))) = Cursor ls d us ds (Just (ML sus (sds:sls) [] Right))
+selectRight (Cursor ls (r:rs) us ds (Just (ML sus sls sds Right))) = Cursor ls rs us ds (Just (ML sus sls (r:sds) Right))
+selectRight (Cursor ls rs us ds (Just (SL [s] Left)))              = Cursor (s:ls) rs us ds Nothing
+selectRight (Cursor ls rs us ds (Just (SL (s:ss) Left)))           = Cursor (s:ls) rs us ds (Just (SL ss Left))
+selectRight (Cursor ls rs us (d:ds) (Just (ML [] [] [] Left)))     = Cursor [] d (ls:us) ds Nothing
+selectRight (Cursor ls rs us ds (Just (ML [] [] sds Left)))        = Cursor [] rs (ls:us) ds (Just (SL sds Left))
+selectRight (Cursor ls rs us ds (Just (ML [] (sl:sls) sds Left)))  = Cursor [] rs (ls:us) ds (Just (ML sl sls sds Left))
+selectRight (Cursor ls rs us ds (Just (ML (su:sus) sls sds Left))) = Cursor (su:ls) rs us ds (Just (ML sus sls sds Left))
+selectRight c                                                      = c
+
+-- selectAll :: Cursor a -> Cursor a
+-- selectAll (Cursor ls rs [] [] Nothing) = Cursor [] [] [] [] (Just (SL (reverse ls ++ rs) Right))
+-- selectAll (Cursor ls [] us [] Nothing) = Cursor [] [] [] [] (Just (ML _ ls _ Right))
+-- selectAll (Cursor ls rs us ds Nothing) = selectAll $ moveToScreenEnd
+
+mapSelected :: (a -> a) -> Cursor a -> Cursor a
 mapSelected f (Cursor ls rs us ds (Just (SL ss d)))          = Cursor ls rs us ds (Just (SL (map f ss) d))
 mapSelected f (Cursor ls rs us ds (Just (ML sus sls sds d))) = Cursor ls rs us ds (Just (ML (map f sus) (map (map f) sls) (map f sds) d))
 mapSelected f c                                              = c
 
-mapUnselected :: (a -> a)  -> Cursor a -> Cursor a
+mapUnselected :: (a -> a) -> Cursor a -> Cursor a
 mapUnselected f (Cursor ls rs us ds s) = Cursor (map f ls) (map f rs) (map (map f) us) (map (map f) ds) s
 
 -- Properties
