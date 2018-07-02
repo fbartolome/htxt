@@ -9,6 +9,7 @@ import qualified Brick.Widgets.Border.Style as BS
 import qualified Brick.Widgets.Center       as C
 import           Data.List.Split
 import           Data.Maybe
+import           Data.Tuple
 
 import           Application
 import           Cursor
@@ -23,9 +24,10 @@ drawBoxes :: State -> B.Widget UIResource
 drawBoxes s = B.vBox [drawTextBox s, drawBottomBox s]
 
 drawTextBox :: State -> B.Widget UIResource
-drawTextBox s = B.showCursor EditorCursor (B.Location $ (\(x, y) -> (y + 1, x + 1)) $ getCurrentPosition $ text s)
-  $ borderWithLabel (B.str $ " " ++ getFilename s ++ " ")
+drawTextBox s = borderWithLabel (B.str $ " " ++ getFilename s ++ " ")
   $ B.viewport EditorViewpoint B.Both
+  $ B.showCursor EditorCursor (B.Location (swap $ getCurrentPosition $ text s))
+  $ B.visibleRegion (B.Location (swap $ getCurrentPosition $ text s)) (1, 1)
   $ B.vBox $ drawText $ adaptText s
 
 drawText :: [[StyleChar]] -> [B.Widget UIResource]
