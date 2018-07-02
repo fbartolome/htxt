@@ -1,9 +1,12 @@
 module State
   ( State (..)
-  , StyleChar (..)
   , Mode (..)
   , State.empty
   , getFilename
+  , changeMode
+  , auxiliarText
+  -- , modifySearch
+  -- , search
   , undo
   , redo
   , pushUndo
@@ -13,15 +16,14 @@ import           Brick
 import           Data.Sequence
 
 import           Cursor
+import           LineZipper
+import           StyleChar
+import qualified Style as Style
 
-data StyleChar = StyleChar
-  { char  :: Char
-  , style :: Maybe AttrName
-  }
+
 
 data Mode = Insert
-          | Search
-          deriving (Show, Eq)
+          | Search (LineZipper StyleChar) [Position]
 
 data State = State
   { text         :: Cursor StyleChar
@@ -40,6 +42,15 @@ empty = State {text = Cursor.empty, filename = Nothing, terminalSize = (30, 30),
 getFilename :: State -> String
 getFilename (State {filename = Nothing})  = "*Unsaved file*"
 getFilename (State {filename = (Just n)}) = n
+
+-- Modes
+
+changeMode :: Mode -> State -> State
+changeMode m s = s {mode = m}
+
+auxiliarText :: Mode -> [StyleChar]
+auxiliarText Insert      = map (\c -> StyleChar c Nothing ) "Search: CTRL-F"
+auxiliarText (Search lz _) = (map (\c -> StyleChar c Nothing ) "Searching for: ") ++ (toList lz)
 
 -- Undo/Redo
 

@@ -1,6 +1,7 @@
 module Style
 (   theMap,
-    tiltOn
+    tiltOn,
+    search
 ) where
 
 import Brick
