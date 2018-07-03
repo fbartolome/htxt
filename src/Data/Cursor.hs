@@ -1,7 +1,7 @@
-module Cursor
+module Data.Cursor
   ( Cursor (..)
+  , Direction (..)
   , Selection (..)
-  , Direction
   , Position
   , empty
   , insert

@@ -1,3 +1,3 @@
-# Changelog for text-editor
+# Changelog for htxt
 
 ## Unreleased changes
