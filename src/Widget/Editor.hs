@@ -76,8 +76,9 @@ handleEditorEvent :: B.BrickEvent UI.UIResource e -> Editor -> Editor
 handleEditorEvent (B.VtyEvent ev) =
   case ev of
     V.EvKey V.KBS [] -> (applyEdit deleteLeft) . pushUndo
-    V.EvKey V.KEnter [] -> (applyEdit insertLine) . pushUndo
-    V.EvKey (V.KChar c) [] -> (applyEdit (insert (StyleChar c Nothing))) . pushUndo
+    V.EvKey V.KEnter [] -> (applyEdit handleNewLine) . pushUndo
+    V.EvKey (V.KChar c) [] -> (applyEdit $ handleInsert c) . pushUndo
+    V.EvKey (V.KBackTab) [] -> ((\f -> f . f) $ applyEdit $ removeAtLineStart $ StyleChar ' ' Nothing) . pushUndo
     -- Movement
     V.EvKey V.KLeft [] -> applyEdit moveLeft
     V.EvKey V.KRight [] -> applyEdit moveRight
@@ -96,6 +97,33 @@ handleEditorEvent (B.VtyEvent ev) =
     V.EvResize r c -> resize (r, c)
     _ -> id
 handleEditorEvent _ = id
+
+handleInsert :: Char -> C.Cursor StyleChar -> C.Cursor StyleChar
+handleInsert c cursor =
+  case c of
+    '\t' -> case selection cursor of
+              Nothing -> twice (insert (StyleChar ' ' Nothing)) cursor
+              Just s -> twice (insertAtLineStart (StyleChar ' ' Nothing)) cursor
+    c -> insert (StyleChar c Nothing) cursor
+  where
+    twice f = f . f
+
+handleNewLine :: C.Cursor StyleChar -> C.Cursor StyleChar
+handleNewLine c =
+  case selection c of
+    Nothing -> foldl (\h sc -> (insert sc) h) (insertLine c) (indentation (reverse $ left c) False)
+    Just a  -> handleNewLine $ deleteLeft c
+  where
+    items = ['-','*','+','#','>']
+    space = StyleChar ' ' Nothing
+    indentation [] _ = []
+    indentation (sc:scs) False
+      | sc == space = space : (indentation scs False)
+      | (char sc) `elem` items = (StyleChar (char sc) Nothing) : (indentation scs True)
+      | otherwise = []
+    indentation (sc:scs) True
+      | sc == space = space : (indentation scs True)
+      | otherwise = []
 
 handleMoveDown :: Editor -> Editor
 handleMoveDown e

@@ -11,6 +11,8 @@ module Data.Cursor
   , deleteRight
   , moveLinesWithSelectionUp
   , moveLinesWithSelectionDown
+  , insertAtLineStart
+  , removeAtLineStart
   , moveLeft
   , moveRight
   , moveUp
@@ -98,6 +100,37 @@ moveLinesWithSelectionUp c                          = c
 moveLinesWithSelectionDown :: Cursor a -> Cursor a
 moveLinesWithSelectionDown (Cursor ls rs us (d:ds) s) = Cursor ls rs ((reverse d):us) ds s
 moveLinesWithSelectionDown c                          = c
+
+insertAtLineStart :: a -> Cursor a -> Cursor a
+insertAtLineStart e (Cursor ls rs us ds (Just (ML fl lb ll Left))) =
+  Cursor (ls ++ [e]) rs us ds (Just (ML fl (map (e:) lb) (e:ll) Left))
+insertAtLineStart e (Cursor ls rs us ds (Just (ML fl lb ll Right))) =
+  Cursor (ls ++ [e]) rs us ds (Just (ML fl (map (\l -> l ++ [e]) lb) (ll ++ [e]) Right))
+insertAtLineStart e c = c {left = (left c) ++ [e]}
+
+removeAtLineStart :: Eq a => a -> Cursor a -> Cursor a
+removeAtLineStart e (Cursor ls rs us ds s) =
+  case ls of
+    [] -> case s of
+            Just (ML fl lb ll Left) ->
+              Cursor [] rs us ds (Just (ML (removeAtLineStart' e fl) (map (removeAtLineStart' e) lb) (removeAtLineStart' e ll) Left))
+            Just (ML fl lb ll Right) ->
+              Cursor [] rs us ds (Just (ML (reverseRemoveAtLineStart' e fl) (map (reverseRemoveAtLineStart' e) lb) (reverseRemoveAtLineStart' e ll) Right))
+            Just (SL l Left) -> Cursor ls rs us ds (Just (SL (removeAtLineStart' e l) Left))
+            Just (SL l Right) -> Cursor ls rs us ds (Just (SL (reverseRemoveAtLineStart' e l) Left))
+            _ -> Cursor ls (removeAtLineStart' e rs) us ds s
+    ls' -> case s of
+            Just (ML fl lb ll Left) ->
+              Cursor (reverseRemoveAtLineStart' e ls) rs us ds (Just (ML fl (map (removeAtLineStart' e) lb) (removeAtLineStart' e ll) Left))
+            Just (ML fl lb ll Right) ->
+              Cursor (reverseRemoveAtLineStart' e ls) rs us ds (Just (ML fl (map (reverseRemoveAtLineStart' e) lb) (reverseRemoveAtLineStart' e ll) Right))
+            _ -> Cursor (reverseRemoveAtLineStart' e ls) rs us ds s
+  where
+    removeAtLineStart' a [] = []
+    removeAtLineStart' a (x:xs)
+      | x == a = xs
+      | otherwise = (x:xs)
+    reverseRemoveAtLineStart' a = reverse . ((removeAtLineStart' a) . reverse)
 
 -- Navigation
 

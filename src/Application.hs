@@ -61,7 +61,7 @@ tooManyArguments = "Too many arguments"
 
 save :: State -> IO State
 save s = do
-  liftIO $ writeFile (F.filePath $ E.file $ S.editor s) $ foldr (\l h -> (map char l) ++ "\n" ++ h) "" $ getLines cursor
+  writeFile (F.filePath $ E.file $ S.editor s) $ foldr (\l h -> (map char l) ++ "\n" ++ h) "" $ getLines cursor
   return s
   where
     cursor = contents $ editor s
