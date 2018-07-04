@@ -4,6 +4,7 @@ module Data.Cursor
   , Selection (..)
   , Position
   , empty
+  , newCursor
   , insert
   , insertLine
   , deleteLeft
@@ -65,6 +66,10 @@ data Cursor a = Cursor
 
 empty :: Cursor a
 empty = Cursor [] [] [] [] Nothing
+
+newCursor :: [[a]] -> Cursor a
+newCursor []     = empty
+newCursor (e:es) = Cursor [] e [] es Nothing
 
 -- Content
 

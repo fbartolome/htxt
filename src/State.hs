@@ -3,7 +3,8 @@ module State where
 import qualified Brick             as B
 
 import           Data.File         as F
-import           Widget.Editor     as E
+import           Data.Styled.StyleChar
+import qualified Widget.Editor     as E
 import           Widget.UIResource as UI
 
 data Focus
@@ -16,5 +17,5 @@ data State = State
   , focus  :: Focus
   }
 
-empty :: F.File -> State
-empty f = State {editor = E.makeEditor EditorContent f, focus = Editor}
+newState :: F.File -> [[StyleChar]] -> State
+newState f tx = State {editor = E.makeEditor EditorContent f tx, focus = Editor}

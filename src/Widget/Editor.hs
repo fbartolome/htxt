@@ -1,5 +1,5 @@
 module Widget.Editor
-  ( Editor
+  ( Editor(..)
   , makeEditor
   , renderEditor
   , handleEditorEvent
@@ -30,12 +30,12 @@ data Editor = Editor
   , redoContents :: [C.Cursor StyleChar]
   }
 
-makeEditor :: UI.UIResource -> F.File -> Editor
-makeEditor n f =
+makeEditor :: UI.UIResource -> F.File -> [[StyleChar]] -> Editor
+makeEditor n f tx =
   Editor
   { editorName = n
   , file = f
-  , contents = C.empty
+  , contents = C.newCursor tx
   , size = (30, 30)
   , undoLimit = 50
   , undoContents = Seq.Empty
