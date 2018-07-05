@@ -1,6 +1,5 @@
 module Widget.Editor
   ( Editor(..)
-  , makeEditor
   , renderEditor
   , handleEditorEvent
   ) where
@@ -18,29 +17,8 @@ import           Data.Cursor           as C
 import           Data.File             as F
 import qualified Data.Styled.Style     as S
 import           Data.Styled.StyleChar
+import           State
 import           Widget.UIResource     as UI
-
-data Editor = Editor
-  { editorName   :: UI.UIResource
-  , file         :: F.File
-  , contents     :: C.Cursor StyleChar
-  , size         :: (Int, Int) -- (r, c)
-  , undoLimit    :: Int
-  , undoContents :: Seq.Seq (C.Cursor StyleChar)
-  , redoContents :: [C.Cursor StyleChar]
-  }
-
-makeEditor :: UI.UIResource -> F.File -> [[StyleChar]] -> Editor
-makeEditor n f tx =
-  Editor
-  { editorName = n
-  , file = f
-  , contents = C.newCursor tx
-  , size = (30, 30)
-  , undoLimit = 50
-  , undoContents = Seq.Empty
-  , redoContents = []
-  }
 
 renderEditor :: Editor -> Bool -> B.Widget UI.UIResource
 renderEditor e f =
@@ -71,14 +49,15 @@ adaptContents (r, _) s = foldr (\line h -> (changeEmptyLine (chunksOf (r - 2) li
     changeEmptyLine [] = [[StyleChar ' ' Nothing]]
     changeEmptyLine l  = l
 
--- Add missing cases
+-- TODO: Add missing cases
 handleEditorEvent :: B.BrickEvent UI.UIResource e -> Editor -> Editor
 handleEditorEvent (B.VtyEvent ev) =
   case ev of
     V.EvKey V.KBS [] -> (applyEdit deleteLeft) . pushUndo
     V.EvKey V.KEnter [] -> (applyEdit handleNewLine) . pushUndo
     V.EvKey (V.KChar c) [] -> (applyEdit $ handleInsert c) . pushUndo
-    V.EvKey (V.KBackTab) [] -> ((\f -> f . f) $ applyEdit $ removeAtLineStart $ StyleChar ' ' Nothing) . pushUndo
+    V.EvKey (V.KBackTab) [] ->
+      ((\f -> f . f) $ applyEdit $ removeAtLineStart $ StyleChar ' ' Nothing) . pushUndo
     -- Movement
     V.EvKey V.KLeft [] -> applyEdit moveLeft
     V.EvKey V.KRight [] -> applyEdit moveRight
@@ -101,9 +80,10 @@ handleEditorEvent _ = id
 handleInsert :: Char -> C.Cursor StyleChar -> C.Cursor StyleChar
 handleInsert c cursor =
   case c of
-    '\t' -> case selection cursor of
-              Nothing -> twice (insert (StyleChar ' ' Nothing)) cursor
-              Just s -> twice (insertAtLineStart (StyleChar ' ' Nothing)) cursor
+    '\t' ->
+      case selection cursor of
+        Nothing -> twice (insert (StyleChar ' ' Nothing)) cursor
+        Just s  -> twice (insertAtLineStart (StyleChar ' ' Nothing)) cursor
     c -> insert (StyleChar c Nothing) cursor
   where
     twice f = f . f
@@ -112,9 +92,9 @@ handleNewLine :: C.Cursor StyleChar -> C.Cursor StyleChar
 handleNewLine c =
   case selection c of
     Nothing -> foldl (\h sc -> (insert sc) h) (insertLine c) (indentation (reverse $ left c) False)
-    Just a  -> handleNewLine $ deleteLeft c
+    Just a -> handleNewLine $ deleteLeft c
   where
-    items = ['-','*','+','#','>']
+    items = ['-', '*', '+', '#', '>']
     space = StyleChar ' ' Nothing
     indentation [] _ = []
     indentation (sc:scs) False
@@ -179,6 +159,7 @@ handleMoveUp e
       (upLineCursorLength `quot` terminalLength) * terminalLength + leftOnTerminal
     selected = selection $ contents e
 
+-- TODO: Ver q onda colores cuando no tienen foco
 -- TODO: Remove style (add it's logic to Cursor)
 applyEdit :: (C.Cursor StyleChar -> C.Cursor StyleChar) -> Editor -> Editor
 applyEdit f e =

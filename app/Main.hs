@@ -1,4 +1,4 @@
-import           Application as App
+import           Application        as App
 import           System.Environment
 
 main :: IO ()

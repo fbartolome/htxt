@@ -5,6 +5,7 @@ module Widget.UIResource
 
 data UIResource
   = MainContent
+  | SearchBarContent
   | EditorContent
   | EditorViewpoint
   | EditorCursor
