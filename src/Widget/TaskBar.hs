@@ -1,0 +1,96 @@
+module Widget.TaskBar where
+--  ( TaskBar(..)
+--  , makeTaskBar
+--  , renderTaskBar
+--  , handleTaskBarEvent
+--  ) where
+--
+--import qualified Brick                 as B
+--import           Brick.Widgets.Border  as B
+--import qualified Data.List             as L
+--import           Data.List.Split
+--import           Data.Maybe
+--import qualified Data.Sequence         as Seq
+--import           Data.Tuple
+--import qualified Graphics.Vty          as V
+--
+--import           Data.Cursor           as C
+--import           Data.File             as F
+--import qualified Data.Styled.Style     as S
+--import           Data.Styled.StyleChar
+--import           Widget.UIResource     as UI
+--
+--data TaskBar = TaskBar
+--  { resourceName :: UI.UIResource
+--  , contents     :: C.Cursor StyleChar
+--  , historyLimit :: Int
+--  , historyUp    :: Seq.Seq (C.Cursor StyleChar)
+--  , historyDown  :: [C.Cursor StyleChar]
+--  }
+--
+--makeTaskBar :: UI.UIResource -> TaskBar
+--makeTaskBar n =
+--  TaskBar
+--  {resourceName = n, contents = C.empty, historyLimit = 50, historyUp = Seq.Empty, historyDown = []}
+--
+--renderTaskBar :: TaskBar -> Bool -> B.Widget UI.UIResource
+--renderTaskBar t f =
+--  let cursorLocation = B.Location ((swap . getCurrentPosition . contents) t)
+--  in B.viewport (resourceName t) B.Horizontal $
+--     (if f
+--        then B.showCursor (resourceName t) cursorLocation
+--        else id) $
+--     B.visibleRegion cursorLocation (1, 1) $ renderContents ((getLines . contents) e)
+--
+--renderContents :: [[StyleChar]] -> B.Widget UI.UIResource
+--renderContents scs = B.vBox $ map (\x -> renderLine x) scs
+--
+--renderLine :: [StyleChar] -> B.Widget UI.UIResource
+--renderLine scs = B.hBox (foldr (\sc h -> (renderChar sc) : h) [B.str " "] scs)
+--
+--renderChar :: StyleChar -> B.Widget UI.UIResource
+--renderChar sc
+--  | style sc == Nothing = B.str [char sc]
+--  | otherwise = B.withAttr ((fromJust . style) sc) $ B.str [char sc]
+--
+--handleTaskBarEvent :: B.BrickEvent UI.UIResource e -> TaskBar -> TaskBar
+--handleTaskBarEvent (B.VtyEvent ev) =
+--  case ev of
+--    V.EvKey V.KBS []            -> applyEdit deleteLeft
+--    V.EvKey (V.KChar c) []      -> applyEdit (insert (StyleChar c Nothing))
+--    -- Command
+--    V.EvKey V.KEnter []         -> executeCommand
+--    -- Movement
+--    V.EvKey V.KLeft []          -> applyEdit moveLeft
+--    V.EvKey V.KRight []         -> applyEdit moveRight
+--    -- Selection
+--    V.EvKey V.KLeft [V.MShift]  -> applyEdit selectLeft
+--    V.EvKey V.KRight [V.MShift] -> applyEdit selectRight
+--    -- History
+--    V.EvKey V.KUp []            -> historyUp
+--    V.EvKey V.KDown []          -> historyDown
+--    -- Other
+--    _                           -> id
+--handleTaskBarEvent _ = id
+--
+---- TODO: Ver q onda colores cuando no tienen foco
+---- TODO: Remove style (add it's logic to Cursor)
+--applyEdit :: (C.Cursor StyleChar -> C.Cursor StyleChar) -> TaskBar -> TaskBar
+--applyEdit f t =
+--  t
+--  { contents =
+--      mapUnselected (\sc -> sc {style = Nothing}) $
+--      mapSelected (\sc -> sc {style = Just S.tiltOn}) $ (f . contents) t
+--  }
+--
+--executeCommand :: TaskBar -> TaskBar
+--executeCommand = undefined
+--
+--historyUp :: TaskBar -> TaskBar
+--historyUp = undefined
+--
+--historyDown :: TaskBar -> TaskBar
+--historyDown = undefined
+--
+--pushToHistory :: TaskBar -> TaskBar
+--pushToHistory = undefined

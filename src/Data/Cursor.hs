@@ -1,15 +1,20 @@
-module Cursor
+module Data.Cursor
   ( Cursor (..)
+  , Direction (..)
   , Selection (..)
-  , Direction
   , Position
   , empty
+  , newCursor
   , insert
   , insertLine
   , deleteLeft
   , deleteRight
   , moveLinesWithSelectionUp
   , moveLinesWithSelectionDown
+  , insertBeforeSelection
+  , insertAfterSelection
+  , insertAtLineStart
+  , removeAtLineStart
   , moveLeft
   , moveRight
   , moveUp
@@ -23,6 +28,7 @@ module Cursor
   , moveToPosition
   , selectLeft
   , selectRight
+  , selectAll
   , mapSelected
   , mapUnselected
   , searchAndReplace
@@ -66,6 +72,10 @@ data Cursor a = Cursor
 empty :: Cursor a
 empty = Cursor [] [] [] [] Nothing
 
+newCursor :: [[a]] -> Cursor a
+newCursor []     = empty
+newCursor (e:es) = Cursor [] e [] es Nothing
+
 -- Content
 
 insert :: a -> Cursor a -> Cursor a
@@ -93,6 +103,43 @@ moveLinesWithSelectionUp c                          = c
 moveLinesWithSelectionDown :: Cursor a -> Cursor a
 moveLinesWithSelectionDown (Cursor ls rs us (d:ds) s) = Cursor ls rs ((reverse d):us) ds s
 moveLinesWithSelectionDown c                          = c
+
+insertBeforeSelection :: a -> Cursor a -> Cursor a
+insertBeforeSelection e (Cursor ls rs us ds s) = Cursor (e:ls) rs us ds s
+
+insertAfterSelection :: a -> Cursor a -> Cursor a
+insertAfterSelection e (Cursor ls rs us ds s) = Cursor ls (e:rs) us ds s
+
+insertAtLineStart :: a -> Cursor a -> Cursor a
+insertAtLineStart e (Cursor ls rs us ds (Just (ML fl lb ll Left))) =
+  Cursor (ls ++ [e]) rs us ds (Just (ML fl (map (e:) lb) (e:ll) Left))
+insertAtLineStart e (Cursor ls rs us ds (Just (ML fl lb ll Right))) =
+  Cursor (ls ++ [e]) rs us ds (Just (ML fl (map (\l -> l ++ [e]) lb) (ll ++ [e]) Right))
+insertAtLineStart e c = c {left = (left c) ++ [e]}
+
+removeAtLineStart :: Eq a => a -> Cursor a -> Cursor a
+removeAtLineStart e (Cursor ls rs us ds s) =
+  case ls of
+    [] -> case s of
+            Just (ML fl lb ll Left) ->
+              Cursor [] rs us ds (Just (ML (removeAtLineStart' e fl) (map (removeAtLineStart' e) lb) (removeAtLineStart' e ll) Left))
+            Just (ML fl lb ll Right) ->
+              Cursor [] rs us ds (Just (ML (reverseRemoveAtLineStart' e fl) (map (reverseRemoveAtLineStart' e) lb) (reverseRemoveAtLineStart' e ll) Right))
+            Just (SL l Left) -> Cursor ls rs us ds (Just (SL (removeAtLineStart' e l) Left))
+            Just (SL l Right) -> Cursor ls rs us ds (Just (SL (reverseRemoveAtLineStart' e l) Left))
+            _ -> Cursor ls (removeAtLineStart' e rs) us ds s
+    ls' -> case s of
+            Just (ML fl lb ll Left) ->
+              Cursor (reverseRemoveAtLineStart' e ls) rs us ds (Just (ML fl (map (removeAtLineStart' e) lb) (removeAtLineStart' e ll) Left))
+            Just (ML fl lb ll Right) ->
+              Cursor (reverseRemoveAtLineStart' e ls) rs us ds (Just (ML fl (map (reverseRemoveAtLineStart' e) lb) (reverseRemoveAtLineStart' e ll) Right))
+            _ -> Cursor (reverseRemoveAtLineStart' e ls) rs us ds s
+  where
+    removeAtLineStart' a [] = []
+    removeAtLineStart' a (x:xs)
+      | x == a = xs
+      | otherwise = (x:xs)
+    reverseRemoveAtLineStart' a = reverse . ((removeAtLineStart' a) . reverse)
 
 -- Navigation
 
@@ -144,6 +191,7 @@ moveToScreenStart c = moveToScreenTop $ moveToLineStart c
 moveToScreenEnd :: Cursor a -> Cursor a
 moveToScreenEnd c = moveToScreenBottom $ moveToLineEnd c
 
+-- TODO: ver si lo puedo hacer mas eficiente
 moveToPosition :: Cursor a -> Position -> Cursor a
 moveToPosition c (rows,cols) = moveToPosition' c' (rows',cols')
   where
@@ -152,14 +200,6 @@ moveToPosition c (rows,cols) = moveToPosition' c' (rows',cols')
     cols'
       | rows' == 0 = min cols (length $ right c')
       | otherwise = min cols (length $ (down c') !! (rows' - 1))
-
--- private
-moveToPosition' :: Cursor a -> Position -> Cursor a
-moveToPosition' c (0,0) = c
-moveToPosition' c (0, cols) = moveToPosition' (moveRight c) (0, cols - 1)
-moveToPosition' c (rows, cols) = moveToPosition' (moveDown c) (rows - 1, cols)
-  -- | rows > (length ds) = moveToPosition' (Cursor ls rs us ds Nothing) (0, cols)
-
 
 -- Selection
 
@@ -194,10 +234,12 @@ selectRight (Cursor ls rs us ds (Just (ML [] (sl:sls) sds Left)))  = Cursor [] r
 selectRight (Cursor ls rs us ds (Just (ML (su:sus) sls sds Left))) = Cursor (su:ls) rs us ds (Just (ML sus sls sds Left))
 selectRight c                                                      = c
 
--- selectAll :: Cursor a -> Cursor a
--- selectAll (Cursor ls rs [] [] Nothing) = Cursor [] [] [] [] (Just (SL (reverse ls ++ rs) Right))
--- selectAll (Cursor ls [] us [] Nothing) = Cursor [] [] [] [] (Just (ML _ ls _ Right))
--- selectAll (Cursor ls rs us ds Nothing) = selectAll $ moveToScreenEnd
+selectAll :: Cursor a -> Cursor a
+selectAll (Cursor [] rs [] [] Nothing) = Cursor [] [] [] [] (Just (SL rs Left))
+selectAll (Cursor [] rs [] ds Nothing) = Cursor [] [] [] [] (Just (ML rs body lastElem Left))
+  where
+    (lastElem, body) = (\(x:xs) -> (x, reverse xs)) $ reverse ds
+selectAll c = selectAll $ moveToScreenStart c
 
 mapSelected :: (a -> a) -> Cursor a -> Cursor a
 mapSelected f (Cursor ls rs us ds (Just (SL ss d)))          = Cursor ls rs us ds (Just (SL (map f ss) d))
@@ -215,18 +257,6 @@ searchAndReplace old new c = (moveToPosition c' p, ps)
   where
     p = getCurrentPosition c
     (c', ps) = searchAndReplaceFromActualPosition old new $ (moveToScreenStart c,[])
-
--- assumes that selection is Nothing
--- private
-searchAndReplaceFromActualPosition :: Eq a => [a] -> [a] -> (Cursor a, [Position]) -> (Cursor a, [Position])
-searchAndReplaceFromActualPosition _ _ (Cursor l [] u [] s, p) = (Cursor l [] u [] s, p)
-searchAndReplaceFromActualPosition old new (c, ps) = searchAndReplaceFromActualPosition old new (moveDown $ c {right = replaced}, positions)
-  where split'    = splitOn old $ right c
-        replaced  = DLU.replace old new $ right c
-        positions = calculatePositions split' ps 0
-        calculatePositions (x:[]) ps _ = ps
-        calculatePositions [] ps _     = ps
-        calculatePositions (x:xs) ps a = calculatePositions xs (ps ++ [(length $ up c, a + (length x))]) (a + (length new) + (length x))
 
 replace :: Eq a => [a] -> [a] -> Cursor a -> Cursor a
 replace [] _ c                         = c
@@ -252,6 +282,11 @@ getLines c = restOfLines $ moveToScreenStart c
 
 -- Private
 
+moveToPosition' :: Cursor a -> Position -> Cursor a
+moveToPosition' c (0,0) = c
+moveToPosition' c (0, cols) = moveToPosition' (moveRight c) (0, cols - 1)
+moveToPosition' c (rows, cols) = moveToPosition' (moveDown c) (rows - 1, cols)
+
 moveToSelectionStart :: Cursor a -> Cursor a
 moveToSelectionStart (Cursor ls rs us ds (Just (SL ss Left)))           = Cursor ls (ss ++ rs) us ds Nothing
 moveToSelectionStart (Cursor ls rs us ds (Just (SL ss Right)))          = Cursor ls ((reverse ss) ++ rs) us ds Nothing
@@ -269,6 +304,16 @@ moveToSelectionEnd (Cursor ls rs us ds (Just (ML sus sls sds Left)))  = Cursor (
 moveToSelectionEnd (Cursor ls rs us ds (Just (ML sus sls sds Right))) = Cursor sds rs (sls ++ (firstLineWithSelection : us)) ds Nothing where
   firstLineWithSelection = sus ++ ls
 moveToSelectionEnd c                                                  = c
+
+searchAndReplaceFromActualPosition :: Eq a => [a] -> [a] -> (Cursor a, [Position]) -> (Cursor a, [Position])
+searchAndReplaceFromActualPosition _ _ (Cursor l [] u [] s, p) = (Cursor l [] u [] s, p)
+searchAndReplaceFromActualPosition old new (c, ps) = searchAndReplaceFromActualPosition old new (moveDown $ c {right = replaced}, positions)
+  where split'    = splitOn old $ right c
+        replaced  = DLU.replace old new $ right c
+        positions = calculatePositions split' ps 0
+        calculatePositions (x:[]) ps _ = ps
+        calculatePositions [] ps _     = ps
+        calculatePositions (x:xs) ps a = calculatePositions xs (ps ++ [(length $ up c, a + (length x))]) (a + (length new) + (length x))
 
 restOfLines :: Cursor a -> [[a]]
 restOfLines (Cursor _ rs _ ds _) = rs:ds
