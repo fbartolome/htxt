@@ -66,6 +66,7 @@ handleEditorEvent (B.VtyEvent ev) =
     -- Selection
     V.EvKey V.KLeft [V.MShift] -> applyEdit selectLeft
     V.EvKey V.KRight [V.MShift] -> applyEdit selectRight
+    V.EvKey (V.KChar 'a') [V.MCtrl] -> applyEdit selectAll
     -- Move content
     V.EvKey V.KDown [V.MShift] -> applyEdit moveLinesWithSelectionDown
     V.EvKey V.KUp [V.MShift] -> applyEdit moveLinesWithSelectionUp
@@ -80,10 +81,12 @@ handleEditorEvent _ = id
 handleInsert :: Char -> C.Cursor StyleChar -> C.Cursor StyleChar
 handleInsert c cursor =
   case c of
-    '\t' ->
-      case selection cursor of
-        Nothing -> twice (insert (StyleChar ' ' Nothing)) cursor
-        Just s  -> twice (insertAtLineStart (StyleChar ' ' Nothing)) cursor
+    '\t' -> case selection cursor of
+              Nothing -> twice (insert (StyleChar ' ' Nothing)) cursor
+              Just s -> twice (insertAtLineStart (StyleChar ' ' Nothing)) cursor
+    '(' -> ((insertBeforeSelection (StyleChar '(' Nothing)) . (insertAfterSelection (StyleChar ')' Nothing))) cursor
+    '[' -> ((insertBeforeSelection (StyleChar '[' Nothing)) . (insertAfterSelection (StyleChar ']' Nothing))) cursor
+    '{' -> ((insertBeforeSelection (StyleChar '{' Nothing)) . (insertAfterSelection (StyleChar '}' Nothing))) cursor
     c -> insert (StyleChar c Nothing) cursor
   where
     twice f = f . f
