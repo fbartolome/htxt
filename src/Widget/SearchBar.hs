@@ -15,8 +15,7 @@ import qualified Graphics.Vty          as V
 
 import           Data.Cursor           as C
 import           Data.File             as F
-import qualified Data.Styled.Style     as S
-import           Data.Styled.StyleChar
+import           Data.Styled.StyleChar as S
 import           State
 import           Widget.UIResource     as UI
 
@@ -35,19 +34,14 @@ renderContents scs = B.vBox $ map (\x -> renderLine x) scs
 
 renderLine :: [StyleChar] -> B.Widget UI.UIResource
 renderLine scs =
-  B.hBox ((B.str "Search: ") : (foldr (\sc h -> (renderChar sc) : h) [B.str " "] scs))
-
-renderChar :: StyleChar -> B.Widget UI.UIResource
-renderChar sc
-  | style sc == Nothing = B.str [char sc]
-  | otherwise = B.withAttr ((fromJust . style) sc) $ B.str [char sc]
+  B.hBox ((B.str "Search: ") : (foldr (\sc h -> (S.renderChar sc) : h) [B.str " "] scs))
 
 handleSearchEvent :: B.BrickEvent UI.UIResource e -> State -> State
 handleSearchEvent (B.VtyEvent ev) =
   case ev of
     V.EvKey V.KBS [] -> search . (applyEdit deleteLeft)
     V.EvKey (V.KChar '\t') [] -> id
-    V.EvKey (V.KChar c) [] -> search . (applyEdit (insert (StyleChar c Nothing)))
+    V.EvKey (V.KChar c) [] -> search . (applyEdit (insert (charWnoAttrs c)))
     -- Commands
     V.EvKey V.KEnter [] -> moveToNextOccurrence
     -- Movement
@@ -73,7 +67,7 @@ search (State sb e f) = State newSB newE f
     newSB = sb {currentOccurrences = positions}
     newE = e {contents = (moveToPosition searched p)}
     old = (head . getLines . query) sb
-    new = map (\(StyleChar c _) -> StyleChar c (Just S.search)) old
+    new = map (\(StyleChar c (Attrs sel _)) -> StyleChar c (Attrs sel True)) old
     p = (getCurrentPosition . contents) e
     (searched, positions) = searchAndReplace old new (contents e)
 

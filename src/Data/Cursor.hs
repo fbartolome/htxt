@@ -203,7 +203,6 @@ moveToPosition c (rows,cols) = moveToPosition' c' (rows',cols')
 
 -- Selection
 
--- TODO ver si se puede sacar Maybe y reemplazarlo por SL vacio
 selectLeft :: Cursor a -> Cursor a
 selectLeft (Cursor [] rs (u:us) ds Nothing)                        = Cursor u rs us ds (Just (ML [] [] [] Left))
 selectLeft (Cursor (l:ls) rs us ds Nothing)                        = Cursor ls rs us ds (Just (SL [l] Left))

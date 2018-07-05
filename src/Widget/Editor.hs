@@ -15,8 +15,7 @@ import qualified Graphics.Vty          as V
 
 import           Data.Cursor           as C
 import           Data.File             as F
-import qualified Data.Styled.Style     as S
-import           Data.Styled.StyleChar
+import           Data.Styled.StyleChar as S
 import           State
 import           Widget.UIResource     as UI
 
@@ -35,18 +34,13 @@ renderContents :: [[StyleChar]] -> B.Widget UI.UIResource
 renderContents scs = B.vBox $ map (\x -> renderLine x) scs
 
 renderLine :: [StyleChar] -> B.Widget UI.UIResource
-renderLine scs = B.hBox (foldr (\sc h -> (renderChar sc) : h) [B.str " "] scs)
-
-renderChar :: StyleChar -> B.Widget UI.UIResource
-renderChar sc
-  | style sc == Nothing = B.str [char sc]
-  | otherwise = B.withAttr ((fromJust . style) sc) $ B.str [char sc]
+renderLine scs = B.hBox (foldr (\sc h -> (S.renderChar sc) : h) [B.str " "] scs)
 
 adaptContents :: (Int, Int) -> [[StyleChar]] -> [[StyleChar]]
-adaptContents _ [[]] = [[StyleChar ' ' Nothing]]
+adaptContents _ [[]] = [[charWnoAttrs ' ']]
 adaptContents (r, _) s = foldr (\line h -> (changeEmptyLine (chunksOf (r - 2) line)) ++ h) [] s
   where
-    changeEmptyLine [] = [[StyleChar ' ' Nothing]]
+    changeEmptyLine [] = [[charWnoAttrs ' ']]
     changeEmptyLine l  = l
 
 -- TODO: Add missing cases
@@ -57,7 +51,7 @@ handleEditorEvent (B.VtyEvent ev) =
     V.EvKey V.KEnter [] -> (applyEdit handleNewLine) . pushUndo
     V.EvKey (V.KChar c) [] -> (applyEdit $ handleInsert c) . pushUndo
     V.EvKey (V.KBackTab) [] ->
-      ((\f -> f . f) $ applyEdit $ removeAtLineStart $ StyleChar ' ' Nothing) . pushUndo
+      ((\f -> f . f) $ applyEdit $ removeAtLineStart $ charWnoAttrs ' ') . pushUndo
     -- Movement
     V.EvKey V.KLeft [] -> applyEdit moveLeft
     V.EvKey V.KRight [] -> applyEdit moveRight
@@ -81,13 +75,23 @@ handleEditorEvent _ = id
 handleInsert :: Char -> C.Cursor StyleChar -> C.Cursor StyleChar
 handleInsert c cursor =
   case c of
-    '\t' -> case selection cursor of
-              Nothing -> twice (insert (StyleChar ' ' Nothing)) cursor
-              Just s -> twice (insertAtLineStart (StyleChar ' ' Nothing)) cursor
-    '(' -> ((insertBeforeSelection (StyleChar '(' Nothing)) . (insertAfterSelection (StyleChar ')' Nothing))) cursor
-    '[' -> ((insertBeforeSelection (StyleChar '[' Nothing)) . (insertAfterSelection (StyleChar ']' Nothing))) cursor
-    '{' -> ((insertBeforeSelection (StyleChar '{' Nothing)) . (insertAfterSelection (StyleChar '}' Nothing))) cursor
-    c -> insert (StyleChar c Nothing) cursor
+    '\t' ->
+      case selection cursor of
+        Nothing -> twice (insert (charWnoAttrs ' ')) cursor
+        Just s  -> twice (insertAtLineStart (charWnoAttrs ' ')) cursor
+    '(' ->
+      ((insertBeforeSelection (charWnoAttrs '(')) .
+       (insertAfterSelection (charWnoAttrs ')')))
+        cursor
+    '[' ->
+      ((insertBeforeSelection (charWnoAttrs '[')) .
+       (insertAfterSelection (charWnoAttrs ']')))
+        cursor
+    '{' ->
+      ((insertBeforeSelection (charWnoAttrs '{')) .
+       (insertAfterSelection (charWnoAttrs '}')))
+        cursor
+    c -> insert (charWnoAttrs c) cursor
   where
     twice f = f . f
 
@@ -98,11 +102,11 @@ handleNewLine c =
     Just a -> handleNewLine $ deleteLeft c
   where
     items = ['-', '*', '+', '#', '>']
-    space = StyleChar ' ' Nothing
+    space = charWnoAttrs ' '
     indentation [] _ = []
     indentation (sc:scs) False
       | sc == space = space : (indentation scs False)
-      | (char sc) `elem` items = (StyleChar (char sc) Nothing) : (indentation scs True)
+      | (char sc) `elem` items = (charWnoAttrs (char sc)) : (indentation scs True)
       | otherwise = []
     indentation (sc:scs) True
       | sc == space = space : (indentation scs True)
@@ -165,13 +169,14 @@ handleMoveUp e
 -- TODO: Ver q onda colores cuando no tienen foco
 -- TODO: Remove style (add it's logic to Cursor)
 applyEdit :: (C.Cursor StyleChar -> C.Cursor StyleChar) -> Editor -> Editor
-applyEdit f e =
-  e
-  { contents =
-      mapUnselected (\sc -> sc {style = Nothing}) $
-      mapSelected (\sc -> sc {style = Just S.tiltOn}) $ (f . contents) e
-  }
+applyEdit f e = e {contents = (f . contents) e}
 
+-- TODO: Remove
+--  e
+--  { contents =
+--      mapUnselected (\sc -> sc {style = Nothing}) $
+--      mapSelected (\sc -> sc {style = Just S.tiltOn}) $ (f . contents) e
+--  }
 resize :: (Int, Int) -> Editor -> Editor
 resize s e = e {size = s}
 
