@@ -8,6 +8,7 @@ import           Control.Monad
 import           Control.Monad.IO.Class
 import           Data.List.Split
 import qualified Graphics.Vty           as V
+import qualified System.Hclip           as HC
 import           System.IO
 
 import           Data.Cursor
@@ -34,8 +35,7 @@ start args = do
             , B.appAttrMap = const theMap
             }
           initState =
-            S.newState (F.File file file) $
-            map (map (\c -> charWnoAttrs c)) $ splitOn "\n" text
+            S.newState (F.File file file) $ map (map (\c -> charWnoAttrs c)) $ splitOn "\n" text
           -- TODO: tener en cuenta los tabs
       eventChan <- B.newBChan 10
       void $ B.customMain (V.mkVty V.defaultConfig) (Just eventChan) app initState
@@ -55,6 +55,9 @@ handleAppEvent ::
      State -> B.BrickEvent UI.UIResource UIEvent -> B.EventM UI.UIResource (B.Next State)
 handleAppEvent s (B.VtyEvent (V.EvKey V.KEsc [])) = B.halt s
 handleAppEvent s (B.VtyEvent (V.EvKey (V.KChar 's') [V.MCtrl])) = liftIO (save s) >>= B.continue
+handleAppEvent s (B.VtyEvent (V.EvKey (V.KChar 'c') [V.MCtrl])) = liftIO (copy s) >>= B.continue
+handleAppEvent s (B.VtyEvent (V.EvKey (V.KChar 'x') [V.MCtrl])) = liftIO (cut s) >>= B.continue
+handleAppEvent s (B.VtyEvent (V.EvKey (V.KChar 'v') [V.MCtrl])) = liftIO (paste s) >>= B.continue
 handleAppEvent s (B.VtyEvent (V.EvKey (V.KChar 'f') [V.MCtrl])) = B.continue (s {focus = f})
   where
     f =
@@ -80,3 +83,22 @@ save s = do
   return s
   where
     cursor = E.contents $ editor s
+
+copy :: State -> IO State
+copy s = do
+  HC.setClipboard c
+  return s
+  where
+    c = (E.copy . editor) s
+
+cut :: State -> IO State
+cut s = do
+  HC.setClipboard c
+  return s {editor = e}
+  where
+    (e, c) = (E.cut . editor) s
+
+paste :: State -> IO State
+paste s = do
+  c <- HC.getClipboard
+  return s {editor = E.paste c (editor s)}

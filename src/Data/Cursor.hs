@@ -31,6 +31,7 @@ module Data.Cursor
   , selectAll
   , mapSelected
   , mapUnselected
+  , getSelectedLines
   , searchAndReplace
   , replace
   , getCurrentPosition
@@ -247,6 +248,15 @@ mapSelected f c                                              = c
 
 mapUnselected :: (a -> a) -> Cursor a -> Cursor a
 mapUnselected f (Cursor ls rs us ds s) = Cursor (map f ls) (map f rs) (map (map f) us) (map (map f) ds) s
+
+getSelectedLines :: Cursor a -> [[a]]
+getSelectedLines c =
+  case selection c of
+    Just (SL ss Left)           -> [ss]
+    Just (SL ss Right)          -> [reverse ss]
+    Just (ML sus sls sds Left)  -> (sus : sls) ++ [sds]
+    Just (ML sus sls sds Right) -> ((reverse sus) : (map reverse sls)) ++ [sds]
+    _                           -> []
 
 -- Replace
 

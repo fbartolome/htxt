@@ -2,6 +2,9 @@ module Widget.Editor
   ( Editor(..)
   , renderEditor
   , handleEditorEvent
+  , copy
+  , cut
+  , paste
   ) where
 
 import qualified Brick                 as B
@@ -80,17 +83,15 @@ handleInsert c cursor =
         Nothing -> twice (insert (charWnoAttrs ' ')) cursor
         Just s  -> twice (insertAtLineStart (charWnoAttrs ' ')) cursor
     '(' ->
-      ((insertBeforeSelection (charWnoAttrs '(')) .
-       (insertAfterSelection (charWnoAttrs ')')))
+      ((insertBeforeSelection (charWnoAttrs '(')) . (insertAfterSelection (charWnoAttrs ')')))
         cursor
     '[' ->
-      ((insertBeforeSelection (charWnoAttrs '[')) .
-       (insertAfterSelection (charWnoAttrs ']')))
+      ((insertBeforeSelection (charWnoAttrs '[')) . (insertAfterSelection (charWnoAttrs ']')))
         cursor
     '{' ->
-      ((insertBeforeSelection (charWnoAttrs '{')) .
-       (insertAfterSelection (charWnoAttrs '}')))
+      ((insertBeforeSelection (charWnoAttrs '{')) . (insertAfterSelection (charWnoAttrs '}')))
         cursor
+    '\n' -> insertLine cursor
     c -> insert (charWnoAttrs c) cursor
   where
     twice f = f . f
@@ -197,3 +198,12 @@ pushUndo (Editor e f c s ul us rs)
   | otherwise = Editor e f c s ul (c Seq.<| us) []
   where
     updateUndos (us Seq.:|> u) = c Seq.<| us
+
+copy :: Editor -> String
+copy e = L.intercalate "\n" (map toString ((getSelectedLines . contents) e))
+
+cut :: Editor -> (Editor, String)
+cut e = (e {contents = (deleteLeft . contents) e}, copy e)
+
+paste :: String -> Editor -> Editor
+paste s e = (foldl (\h x -> applyEdit (handleInsert x) h) (pushUndo e) s)
