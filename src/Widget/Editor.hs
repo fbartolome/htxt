@@ -5,6 +5,7 @@ module Widget.Editor
   , copy
   , cut
   , paste
+  , resize
   ) where
 
 import qualified Brick                 as B
@@ -70,8 +71,7 @@ handleEditorEvent (B.VtyEvent ev) =
     -- Undo/Redo
     V.EvKey (V.KChar 'z') [V.MCtrl] -> undo
     V.EvKey (V.KChar 'y') [V.MCtrl] -> redo
-    -- Other
-    V.EvResize r c -> resize (r, c)
+    -- Default
     _ -> id
 handleEditorEvent _ = id
 
@@ -172,12 +172,6 @@ handleMoveUp e
 applyEdit :: (C.Cursor StyleChar -> C.Cursor StyleChar) -> Editor -> Editor
 applyEdit f e = e {contents = (f . contents) e}
 
--- TODO: Remove
---  e
---  { contents =
---      mapUnselected (\sc -> sc {style = Nothing}) $
---      mapSelected (\sc -> sc {style = Just S.tiltOn}) $ (f . contents) e
---  }
 resize :: (Int, Int) -> Editor -> Editor
 resize s e = e {size = s}
 

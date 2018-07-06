@@ -64,6 +64,10 @@ handleAppEvent s (B.VtyEvent (V.EvKey (V.KChar 'f') [V.MCtrl])) = B.continue (s 
       case focus s of
         OnEditor    -> OnSearchBar
         OnSearchBar -> OnEditor
+-- Resize
+handleAppEvent s (B.VtyEvent (V.EvResize r c)) = B.continue (s {editor = resizedEditor})
+  where resizedEditor = E.resize (r,c) $ editor s
+-- Other
 handleAppEvent s e =
   case focus s of
     OnEditor -> B.continue (s {editor = E.handleEditorEvent e (S.editor s)})
