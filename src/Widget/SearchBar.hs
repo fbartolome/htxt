@@ -2,6 +2,9 @@ module Widget.SearchBar
   ( SearchBar(..)
   , renderSearchBar
   , handleSearchEvent
+  , copy
+  , cut
+  , paste
   ) where
 
 import qualified Brick                 as B
@@ -37,29 +40,36 @@ renderLine scs =
   B.hBox ((B.str "Search: ") : (foldr (\sc h -> (S.renderChar sc) : h) [B.str " "] scs))
 
 handleSearchEvent :: B.BrickEvent UI.UIResource e -> State -> State
-handleSearchEvent (B.VtyEvent ev) =
+handleSearchEvent (B.VtyEvent ev) s =
   case ev of
-    V.EvKey V.KBS [] -> search . (applyEdit deleteLeft)
-    V.EvKey (V.KChar '\t') [] -> id
-    V.EvKey (V.KChar c) [] -> search . (applyEdit (insert (charWnoAttrs c)))
+    V.EvKey V.KBS [] -> search (updateSearchBar (applyEdit deleteLeft (searchBar s)) s)
+    V.EvKey (V.KChar c) [] -> search (updateSearchBar (applyEdit (handleInsert c) (searchBar s)) s)
     -- Commands
-    V.EvKey V.KEnter [] -> moveToNextOccurrence
+    V.EvKey V.KEnter [] -> moveToNextOccurrence s
     -- Movement
-    V.EvKey V.KLeft [] -> applyEdit moveLeft
-    V.EvKey V.KRight [] -> applyEdit moveRight
+    V.EvKey V.KLeft [] -> updateSearchBar (applyEdit moveLeft (searchBar s)) s
+    V.EvKey V.KRight [] -> updateSearchBar (applyEdit moveRight (searchBar s)) s
     -- Selection
-    V.EvKey V.KLeft [V.MShift] -> applyEdit selectLeft
-    V.EvKey V.KRight [V.MShift] -> applyEdit selectRight
+    V.EvKey V.KLeft [V.MShift] -> updateSearchBar (applyEdit selectLeft (searchBar s)) s
+    V.EvKey V.KRight [V.MShift] -> updateSearchBar (applyEdit selectRight (searchBar s)) s
     -- Other
-    _ -> id
-handleSearchEvent _ = id
+    _ -> id s
+handleSearchEvent _ s = id s
 
--- TODO: Ver q onda colores cuando no tienen foco
--- TODO: Remove style (add it's logic to Cursor)
-applyEdit :: (C.Cursor StyleChar -> C.Cursor StyleChar) -> State -> State
-applyEdit func (State sb e f) = State newSB e f
+handleInsert :: Char -> C.Cursor StyleChar -> C.Cursor StyleChar
+handleInsert c =
+  case c of
+    '\t' -> twice (insert (charWnoAttrs ' '))
+    '\n' -> id
+    c    -> insert (charWnoAttrs c)
   where
-    newSB = sb {query = (func . query) sb}
+    twice f = f . f
+
+applyEdit :: (C.Cursor StyleChar -> C.Cursor StyleChar) -> SearchBar -> SearchBar
+applyEdit f sb = sb {query = (f . query) sb}
+
+updateSearchBar :: SearchBar -> State -> State
+updateSearchBar sb s = s {searchBar = sb}
 
 search :: State -> State
 search (State sb e f) = State newSB newE f
@@ -77,3 +87,14 @@ moveToNextOccurrence (State (SearchBar sbn sbc (p:ps)) e f) = State newSB newE f
     newSB = SearchBar sbn sbc (ps ++ [p])
     newE = e {contents = (moveToPosition (contents e) p)}
 moveToNextOccurrence s = s
+
+copy :: SearchBar -> String
+copy = toString . head . getSelectedLines . query
+
+cut :: SearchBar -> (SearchBar, String)
+cut sb = (sb {query = (deleteLeft . query) sb}, copy sb)
+
+paste :: String -> SearchBar -> SearchBar
+paste s sb = (foldl (\h x -> applyEdit (handleInsert x) h) sb firstLineOfS)
+  where
+    firstLineOfS = takeWhile (\x -> x /= '\n') s

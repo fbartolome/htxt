@@ -89,16 +89,29 @@ copy s = do
   HC.setClipboard c
   return s
   where
-    c = (E.copy . editor) s
+    c =
+      case focus s of
+        OnEditor    -> (E.copy . editor) s
+        OnSearchBar -> (SB.copy . searchBar) s
 
 cut :: State -> IO State
-cut s = do
+cut (State sb e OnEditor) = do
   HC.setClipboard c
-  return s {editor = e}
+  return (State sb newE OnEditor)
   where
-    (e, c) = (E.cut . editor) s
+    (newE, c) = E.cut e
+cut (State sb e OnSearchBar) = do
+  HC.setClipboard c
+  return (State newSB e OnSearchBar)
+  where
+    (newSB, c) = SB.cut sb
 
 paste :: State -> IO State
 paste s = do
   c <- HC.getClipboard
-  return s {editor = E.paste c (editor s)}
+  return (newS c)
+  where
+    newS c =
+      case focus s of
+        OnEditor    -> s {editor = E.paste c (editor s)}
+        OnSearchBar -> s {searchBar = SB.paste c (searchBar s)}
