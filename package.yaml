@@ -28,6 +28,7 @@ dependencies:
 - text
 - transformers
 - containers
+- Hclip
 
 library:
   source-dirs: src

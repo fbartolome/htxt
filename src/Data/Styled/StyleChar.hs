@@ -4,6 +4,7 @@ module Data.Styled.StyleChar
   , charWnoAttrs
   , hasAttrs
   , renderChar
+  , toString
   ) where
 
 import qualified Brick             as B
@@ -37,3 +38,6 @@ renderChar (StyleChar c (Attrs sel sea))
   | sel && not sea = B.withAttr S.selected $ B.str [c]
   | not sel && sea = B.withAttr S.search $ B.str [c]
   | otherwise = B.str [c]
+
+toString :: [StyleChar] -> String
+toString scs = map (\x -> char x) scs

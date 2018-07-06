@@ -29,6 +29,7 @@ module Data.Cursor
   , selectLeft
   , selectRight
   , selectAll
+  , getSelectedLines
   , searchAndReplace
   , replace
   , getCurrentPosition
@@ -241,6 +242,15 @@ selectAll (Cursor [] rs [] ds Nothing os ou) = Cursor [] [] [] [] (Just (ML (map
   where
     (lastElem, body) = (\(x:xs) -> (x, reverse xs)) $ reverse ds
 selectAll c = selectAll $ moveToScreenStart c
+
+getSelectedLines :: Cursor a -> [[a]]
+getSelectedLines c =
+  case selection c of
+    Just (SL ss Left)           -> [ss]
+    Just (SL ss Right)          -> [reverse ss]
+    Just (ML sus sls sds Left)  -> (sus : sls) ++ [sds]
+    Just (ML sus sls sds Right) -> ((reverse sus) : (map reverse sls)) ++ [sds]
+    _                           -> []
 
 -- Replace
 
