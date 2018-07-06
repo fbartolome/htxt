@@ -49,12 +49,27 @@ adaptContents (r, _) s = foldr (\line h -> (changeEmptyLine (chunksOf (r - 2) li
 
 cursorPosition :: Editor -> (Int, Int)
 cursorPosition e =
-  (leftListLength - xLimit * additionalUpLength, length upAdapted + additionalUpLength)
+  sum (0, length upAdapted + selAddY) (additionalLength (leftListLength + selAddX) xLimit)
   where
     upAdapted = adaptContents (size e) ((up . contents) e)
     leftListLength = (length . left . contents) e
+    firstListLength = (length . firstLine . fromJust . selection . contents) e
+    (selAddX, selAddY) =
+      case (selection . contents) e of
+        Just (SL ss C.Right) -> (length ss, 0)
+        Just (ML sus sls sds C.Right) ->
+          ( length sds - leftListLength
+          , (length . (adaptContents (size e))) sls +
+            snd (additionalLength (leftListLength + firstListLength) xLimit) +
+            1)
+        _ -> (0, 0)
     xLimit = ((fst . size) e) - 2
-    additionalUpLength = leftListLength `quot` xLimit
+    sum (x1, y1) (x2, y2) = (x1 + x2, y1 + y2)
+
+additionalLength :: Int -> Int -> (Int, Int)
+additionalLength length limit = (length - limit * remainder, remainder)
+  where
+    remainder = length `quot` limit
 
 -- TODO: Add missing cases
 handleEditorEvent :: B.BrickEvent UI.UIResource e -> Editor -> Editor
