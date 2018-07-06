@@ -49,7 +49,7 @@ makeEditor n f tx =
   Editor
   { editorName = n
   , file = f
-  , contents = C.newCursor tx
+  , contents = C.newCursor tx (\(StyleChar c (Attrs sel sea)) -> StyleChar c (Attrs True sea)) (\(StyleChar c (Attrs sel sea)) -> StyleChar c (Attrs False sea))
   , size = (30, 30) -- TODO: Sacar de algun lado
   , undoLimit = 50
   , undoContents = Seq.Empty

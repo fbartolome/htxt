@@ -37,22 +37,22 @@ renderLine scs =
   B.hBox ((B.str "Search: ") : (foldr (\sc h -> (S.renderChar sc) : h) [B.str " "] scs))
 
 handleSearchEvent :: B.BrickEvent UI.UIResource e -> State -> State
-handleSearchEvent (B.VtyEvent ev) =
+handleSearchEvent (B.VtyEvent ev) state =
   case ev of
-    V.EvKey V.KBS [] -> search . (applyEdit deleteLeft)
-    V.EvKey (V.KChar '\t') [] -> id
-    V.EvKey (V.KChar c) [] -> search . (applyEdit (insert (charWnoAttrs c)))
+    V.EvKey V.KBS [] -> search $ (applyEdit deleteLeft) $ unsearch state
+    V.EvKey (V.KChar '\t') [] -> state -- TODO: cambiara dos espacios
+    V.EvKey (V.KChar c) [] -> search $ (applyEdit (insert (charWnoAttrs c))) $ unsearch state
     -- Commands
-    V.EvKey V.KEnter [] -> moveToNextOccurrence
+    V.EvKey V.KEnter [] -> moveToNextOccurrence state
     -- Movement
-    V.EvKey V.KLeft [] -> applyEdit moveLeft
-    V.EvKey V.KRight [] -> applyEdit moveRight
+    V.EvKey V.KLeft [] -> applyEdit moveLeft state
+    V.EvKey V.KRight [] -> applyEdit moveRight state
     -- Selection
-    V.EvKey V.KLeft [V.MShift] -> applyEdit selectLeft
-    V.EvKey V.KRight [V.MShift] -> applyEdit selectRight
+    V.EvKey V.KLeft [V.MShift] -> applyEdit selectLeft state
+    V.EvKey V.KRight [V.MShift] -> applyEdit selectRight state
     -- Other
-    _ -> id
-handleSearchEvent _ = id
+    _ -> state
+handleSearchEvent _ state = state
 
 -- TODO: Ver q onda colores cuando no tienen foco
 -- TODO: Remove style (add it's logic to Cursor)
@@ -70,10 +70,21 @@ search (State sb e f) = State newSB newE f
     new = map (\(StyleChar c (Attrs sel _)) -> StyleChar c (Attrs sel True)) old
     p = (getCurrentPosition . contents) e
     (searched, positions) = searchAndReplace old new (contents e)
-
+    
 moveToNextOccurrence :: State -> State
 moveToNextOccurrence (State (SearchBar sbn sbc (p:ps)) e f) = State newSB newE f
   where
     newSB = SearchBar sbn sbc (ps ++ [p])
-    newE = e {contents = (moveToPosition (contents e) p)}
+    newE = e {contents = foldl (\h c -> selectRight h) (moveToPosition (contents e) p) query}
+    query = head $ getLines sbc
 moveToNextOccurrence s = s
+
+unsearch :: State -> State
+unsearch state = state {editor = editor'}
+  where
+    editor' = (editor state) {contents = unsearchCursor}
+    unsearchCursor = foldr (\position h -> unsearchOneOccurrence q $ moveToPosition h position) cursor ps
+    q = (head . getLines . query . searchBar) state
+    ps = (currentOccurrences . searchBar) state
+    cursor = (contents . editor) state
+    unsearchOneOccurrence q c = foldl (\h ch -> insert ch $ deleteRight h) c q
