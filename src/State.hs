@@ -4,6 +4,8 @@ module State
   , Editor(..)
   , SearchBar(..)
   , newState
+  , makeEditor
+  , makeSearchBar
   ) where
 
 import qualified Brick                 as B
@@ -29,7 +31,7 @@ data State = State
 newState :: F.File -> [[StyleChar]] -> State
 newState f tx =
   State
-  { searchBar = makeSearchBar SearchBarContent
+  { searchBar = makeSearchBar SearchBarContent [[]]
   , editor = makeEditor EditorContent f tx
   , focus = OnEditor
   }
@@ -62,10 +64,10 @@ data SearchBar = SearchBar
   , currentOccurrences :: [C.Position]
   }
 
-makeSearchBar :: UI.UIResource -> SearchBar
-makeSearchBar n =
+makeSearchBar :: UI.UIResource -> [[StyleChar]] -> SearchBar
+makeSearchBar n tx =
   SearchBar
   { resourceName = n
-  , query = C.newCursor [[]] (\(StyleChar c (Attrs sel sea)) -> StyleChar c (Attrs True sea)) (\(StyleChar c (Attrs sel sea)) -> StyleChar c (Attrs False sea))
+  , query = C.newCursor tx (\(StyleChar c (Attrs sel sea)) -> StyleChar c (Attrs True sea)) (\(StyleChar c (Attrs sel sea)) -> StyleChar c (Attrs False sea))
   , currentOccurrences = []
   }

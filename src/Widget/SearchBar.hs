@@ -39,6 +39,18 @@ renderLine :: [StyleChar] -> B.Widget UI.UIResource
 renderLine scs =
   B.hBox ((B.str "Search: ") : (foldr (\sc h -> (S.renderChar sc) : h) [B.str " "] scs))
 
+onShow :: State -> State
+onShow (State sb e f) =
+  case (selection . contents) e of
+    Just (SL l C.Left) -> search $ State (makeSearchBar SearchBarContent [l]) e f
+    Just (SL l C.Right) -> search $ State (makeSearchBar SearchBarContent [reverse l]) e f
+    Just (ML fl _ _ C.Left) -> search $ State (makeSearchBar SearchBarContent [fl]) e f
+    Just (ML fl _ _ C.Right) -> search $ State (makeSearchBar SearchBarContent [reverse fl]) e f
+    _ -> (State sb e f)
+
+onHide :: State -> State
+onHide = unsearch
+
 handleSearchEvent :: B.BrickEvent UI.UIResource e -> State -> State
 handleSearchEvent (B.VtyEvent ev) s =
   case ev of
