@@ -25,7 +25,7 @@ import           Widget.UIResource     as UI
 
 renderEditor :: Editor -> Bool -> B.Widget UI.UIResource
 renderEditor e f =
-  let cursorLocation = B.Location ((swap . getCurrentPosition . contents) e)
+  let cursorLocation = B.Location (cursorPosition e)
   in B.borderWithLabel (B.str $ " " ++ (((F.fileName) . file) e) ++ " ") $
      B.viewport (editorName e) B.Vertical $
      (if f
@@ -46,6 +46,15 @@ adaptContents (r, _) s = foldr (\line h -> (changeEmptyLine (chunksOf (r - 2) li
   where
     changeEmptyLine [] = [[charWnoAttrs ' ']]
     changeEmptyLine l  = l
+
+cursorPosition :: Editor -> (Int, Int)
+cursorPosition e =
+  (leftListLength - xLimit * additionalUpLength, length upAdapted + additionalUpLength)
+  where
+    upAdapted = adaptContents (size e) ((up . contents) e)
+    leftListLength = (length . left . contents) e
+    xLimit = ((fst . size) e) - 2
+    additionalUpLength = leftListLength `quot` xLimit
 
 -- TODO: Add missing cases
 handleEditorEvent :: B.BrickEvent UI.UIResource e -> Editor -> Editor
