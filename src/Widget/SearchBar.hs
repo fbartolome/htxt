@@ -76,7 +76,7 @@ search :: State -> State
 search (State sb e f) = State newSB newE f
   where
     newSB = sb {currentOccurrences = positions}
-    newE = e {contents = (moveToPosition searched p)}
+    newE = e {contents = (moveToPosition p searched)}
     old = (head . getLines . query) sb
     new = map (\(StyleChar c (Attrs sel _)) -> StyleChar c (Attrs sel True)) old
     p = (getCurrentPosition . contents) e
@@ -86,7 +86,7 @@ moveToNextOccurrence :: State -> State
 moveToNextOccurrence (State (SearchBar sbn sbc (p:ps)) e f) = State newSB newE f
   where
     newSB = SearchBar sbn sbc (ps ++ [p])
-    newE = e {contents = foldl (\h c -> selectRight h) (moveToPosition (contents e) p) query}
+    newE = e {contents = foldl (\h c -> selectRight h) (moveToPosition p $ moveLeft $ contents e) query}
     query = head $ getLines sbc
 moveToNextOccurrence s = s
 
@@ -95,7 +95,7 @@ unsearch state = state {editor = editor'}
   where
     editor' = (editor state) {contents = unsearchCursor}
     unsearchCursor =
-      foldr (\position h -> unsearchOneOccurrence q $ moveToPosition h position) cursor ps
+      foldr (\position h -> unsearchOneOccurrence q $ moveToPosition position h) cursor ps
     q = (head . getLines . query . searchBar) state
     ps = (currentOccurrences . searchBar) state
     cursor = (contents . editor) state

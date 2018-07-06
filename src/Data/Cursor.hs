@@ -194,15 +194,15 @@ moveToScreenStart c = moveToScreenTop $ moveToLineStart c
 moveToScreenEnd :: Cursor a -> Cursor a
 moveToScreenEnd c = moveToScreenBottom $ moveToLineEnd c
 
--- TODO: ver si lo puedo hacer mas eficiente
-moveToPosition :: Cursor a -> Position -> Cursor a
-moveToPosition c (rows,cols) = moveToPosition' c' (rows',cols')
+moveToPosition ::  Position -> Cursor a -> Cursor a
+moveToPosition (row, col) c
+  | row < currRow = moveToPosition (row, col) $ moveUp c
+  | row > currRow = moveToPosition (row, col) $ moveDown c
+  | col < currCol = moveToPosition (row, col) $ moveLeft c
+  | col > currCol = moveToPosition (row, col) $ moveRight c
+  | otherwise = c
   where
-    c'    = moveToScreenStart c
-    rows' = min rows (length $ down c')
-    cols'
-      | rows' == 0 = min cols (length $ right c')
-      | otherwise = min cols (length $ (down c') !! (rows' - 1))
+    (currRow, currCol) = getCurrentPosition c
 
 -- Selection
 
@@ -256,7 +256,7 @@ getSelectedLines c =
 
 searchAndReplace :: Eq a => [a] -> [a] -> Cursor a -> (Cursor a, [Position])
 searchAndReplace [] new c  = (c,[])
-searchAndReplace old new c = (moveToPosition c' p, ps)
+searchAndReplace old new c = (moveToPosition p c', ps)
   where
     p = getCurrentPosition c
     (c', ps) = searchAndReplaceFromActualPosition old new $ (moveToScreenStart c,[])
@@ -287,26 +287,12 @@ getLines (Cursor ls rs us ds s _ _) =
   where
     us' = reverse $ map reverse us
     ls' = reverse ls
--- getLines (Cursor ls rs us ds Nothing _ _) = us' ++ [ls' ++ rs] ++ ds
---   where
---     us' = reverse $ map reverse us
---     ls' = reverse ls
--- getLines (Cursor ls rs us ds (Just (SL l Left)) _ _) = us' ++ [ls' ++ rs] ++ ds
---   where
---     us' = reverse $ map reverse us
---     ls' = reverse ls
-
 
 -- Testing
 
 (-:) x f = f x -- TODO remove
 
 -- Private
-
-moveToPosition' :: Cursor a -> Position -> Cursor a
-moveToPosition' c (0,0) = c
-moveToPosition' c (0, cols) = moveToPosition' (moveRight c) (0, cols - 1)
-moveToPosition' c (rows, cols) = moveToPosition' (moveDown c) (rows - 1, cols)
 
 moveToSelectionStart :: Cursor a -> Cursor a
 moveToSelectionStart (Cursor ls rs us ds (Just (SL ss Left)) os ou)           = Cursor ls (map ou ss ++ rs) us ds Nothing os ou
