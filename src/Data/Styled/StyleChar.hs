@@ -2,6 +2,7 @@ module Data.Styled.StyleChar
   ( StyleChar(..)
   , Attrs(..)
   , charWnoAttrs
+  , styleCharWnoAttrs
   , hasAttrs
   , renderChar
   , toString
@@ -27,6 +28,9 @@ instance Eq StyleChar where
 
 charWnoAttrs :: Char -> StyleChar
 charWnoAttrs c = StyleChar c (Attrs False False)
+
+styleCharWnoAttrs :: StyleChar -> StyleChar
+styleCharWnoAttrs (StyleChar c _) = StyleChar c (Attrs False False)
 
 hasAttrs :: StyleChar -> Bool
 hasAttrs (StyleChar _ (Attrs False False)) = False

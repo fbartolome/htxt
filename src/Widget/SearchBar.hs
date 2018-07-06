@@ -99,7 +99,7 @@ unsearch state = state {editor = editor'}
     q = (head . getLines . query . searchBar) state
     ps = (currentOccurrences . searchBar) state
     cursor = (contents . editor) state
-    unsearchOneOccurrence q c = foldl (\h ch -> insert ch $ deleteRight h) c q
+    unsearchOneOccurrence q c = foldl (\h ch -> insert ch $ deleteRight h) c $ map S.styleCharWnoAttrs q
 
 copy :: SearchBar -> String
 copy = toString . head . getSelectedLines . query

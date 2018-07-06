@@ -63,4 +63,9 @@ data SearchBar = SearchBar
   }
 
 makeSearchBar :: UI.UIResource -> SearchBar
-makeSearchBar n = SearchBar {resourceName = n, query = C.empty, currentOccurrences = []}
+makeSearchBar n =
+  SearchBar
+  { resourceName = n
+  , query = C.newCursor [[]] (\(StyleChar c (Attrs sel sea)) -> StyleChar c (Attrs True sea)) (\(StyleChar c (Attrs sel sea)) -> StyleChar c (Attrs False sea))
+  , currentOccurrences = []
+  }
