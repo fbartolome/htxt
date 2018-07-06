@@ -85,6 +85,19 @@ handleEditorEvent (B.VtyEvent ev) =
     V.EvKey V.KRight [] -> applyEdit moveRight
     V.EvKey V.KDown [] -> handleMoveDown
     V.EvKey V.KUp [] -> handleMoveUp
+    -- TODO: mapear bien los comandos
+    V.EvKey (V.KChar 'p') [V.MCtrl] -> applyEdit moveToLineEnd
+    V.EvKey (V.KChar 'o') [V.MCtrl] -> applyEdit moveToLineStart
+    V.EvKey (V.KChar 'l') [V.MCtrl] -> applyEdit $ moveUntilNotSpace . moveUntilSpace . moveRight
+      where
+        space = S.charWnoAttrs ' '
+        moveUntilSpace = moveRightUntil (space ==) True
+        moveUntilNotSpace = moveRightUntil (not . (space  ==)) False
+    V.EvKey (V.KChar 'k') [V.MCtrl] -> applyEdit $ moveUntilSpace . moveUntilNotSpace . moveLeft
+      where
+        space = S.charWnoAttrs ' '
+        moveUntilSpace = moveLeftUntil (space ==) True
+        moveUntilNotSpace = moveLeftUntil (not . (space  ==)) False
     -- Selection
     V.EvKey V.KLeft [V.MShift] -> applyEdit selectLeft
     V.EvKey V.KRight [V.MShift] -> applyEdit selectRight
@@ -126,7 +139,7 @@ handleNewLine c =
     Nothing -> foldl (\h sc -> (insert sc) h) (insertLine c) (indentation (reverse $ left c) False)
     Just a -> handleNewLine $ deleteLeft c
   where
-    items = ['-', '*', '+', '#', '>']
+    items = "-*+#>"
     space = charWnoAttrs ' '
     indentation [] _ = []
     indentation (sc:scs) False

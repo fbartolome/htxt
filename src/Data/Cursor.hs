@@ -26,6 +26,8 @@ module Data.Cursor
   , moveToScreenStart
   , moveToScreenEnd
   , moveToPosition
+  , moveRightUntil
+  , moveLeftUntil
   , selectLeft
   , selectRight
   , selectAll
@@ -203,6 +205,26 @@ moveToPosition (row, col) c
   | otherwise = c
   where
     (currRow, currCol) = getCurrentPosition c
+
+moveRightUntil :: (a -> Bool) -> Bool -> Cursor a -> Cursor a
+moveRightUntil f untilLineEnd (Cursor ls [] us [] Nothing os ou) = (Cursor ls [] us [] Nothing os ou)
+moveRightUntil f untilLineEnd (Cursor ls [] us ds Nothing os ou)
+  | untilLineEnd = moveRight (Cursor ls [] us ds Nothing os ou)
+  | otherwise = moveRightUntil f untilLineEnd $ moveRight (Cursor ls [] us ds Nothing os ou)
+moveRightUntil f untilLineEnd (Cursor ls (r:rs) us ds Nothing os ou)
+  | f r = Cursor ls (r:rs) us ds Nothing os ou
+  | otherwise = moveRightUntil f untilLineEnd $ Cursor (r:ls) rs us ds Nothing os ou
+moveRightUntil f untilLineEnd c = moveRightUntil f untilLineEnd $ moveRight c
+
+moveLeftUntil :: (a -> Bool) -> Bool -> Cursor a -> Cursor a
+moveLeftUntil f untilLineStart (Cursor [] rs [] ds Nothing os ou) = (Cursor [] rs [] ds Nothing os ou)
+moveLeftUntil f untilLineStart (Cursor [] rs us ds Nothing os ou)
+  | untilLineStart = Cursor [] rs us ds Nothing os ou
+  | otherwise = moveLeftUntil f untilLineStart $ moveLeft (Cursor [] rs us ds Nothing os ou)
+moveLeftUntil f untilLineStart (Cursor (l:ls) rs us ds Nothing os ou)
+  | f l = Cursor (l:ls) rs us ds Nothing os ou
+  | otherwise = moveLeftUntil f untilLineStart $ Cursor ls (l:rs) us ds Nothing os ou
+moveLeftUntil f untilLineStart c = moveLeftUntil f untilLineStart $ moveRight c
 
 -- Selection
 
