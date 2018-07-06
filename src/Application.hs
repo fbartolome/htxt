@@ -35,7 +35,7 @@ start args = do
             , B.appAttrMap = const theMap
             }
           initState =
-            S.newState (F.File file file) $ map (map (\c -> charWnoAttrs c)) $ splitOn "\n" text
+            S.newState (F.makeFile file) $ map (map (\c -> charWnoAttrs c)) $ splitOn "\n" text
           -- TODO: tener en cuenta los tabs
       eventChan <- B.newBChan 10
       void $ B.customMain (V.mkVty V.defaultConfig) (Just eventChan) app initState
