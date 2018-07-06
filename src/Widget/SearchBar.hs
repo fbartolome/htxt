@@ -1,6 +1,8 @@
 module Widget.SearchBar
   ( SearchBar(..)
   , renderSearchBar
+  , onShow
+  , onHide
   , handleSearchEvent
   , copy
   , cut

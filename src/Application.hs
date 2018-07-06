@@ -58,15 +58,16 @@ handleAppEvent s (B.VtyEvent (V.EvKey (V.KChar 's') [V.MCtrl])) = liftIO (save s
 handleAppEvent s (B.VtyEvent (V.EvKey (V.KChar 'c') [V.MCtrl])) = liftIO (copy s) >>= B.continue
 handleAppEvent s (B.VtyEvent (V.EvKey (V.KChar 'x') [V.MCtrl])) = liftIO (cut s) >>= B.continue
 handleAppEvent s (B.VtyEvent (V.EvKey (V.KChar 'v') [V.MCtrl])) = liftIO (paste s) >>= B.continue
-handleAppEvent s (B.VtyEvent (V.EvKey (V.KChar 'f') [V.MCtrl])) = B.continue (s {focus = f})
+handleAppEvent s (B.VtyEvent (V.EvKey (V.KChar 'f') [V.MCtrl])) = B.continue (newS)
   where
-    f =
+    newS =
       case focus s of
-        OnEditor    -> OnSearchBar
-        OnSearchBar -> OnEditor
+        OnEditor    -> (SB.onShow s) {focus = OnSearchBar}
+        OnSearchBar -> (SB.onHide s) {focus = OnEditor}
 -- Resize
 handleAppEvent s (B.VtyEvent (V.EvResize r c)) = B.continue (s {editor = resizedEditor})
-  where resizedEditor = E.resize (r,c) $ editor s
+  where
+    resizedEditor = E.resize (r, c) $ editor s
 -- Other
 handleAppEvent s e =
   case focus s of
