@@ -74,7 +74,12 @@ onShow (State sb e f) =
     newSB l = sbToLineEnd (makeSearchBar SearchBarContent [map SC.selectionOff l])
 
 onHide :: State -> State
-onHide = unsearch
+onHide s = unsearched {editor = newEditor}
+  where
+    unsearched = unsearch s
+    p = (last . currentOccurrences . searchBar) s
+    searched = (head . getLines . query . searchBar) s
+    newEditor = (editor unsearched) {contents = foldr (\c h -> selectRight h) (moveToPosition p (contents $ editor unsearched)) searched}
 
 handleSearchEvent :: B.BrickEvent UI.UIResource e -> State -> State
 handleSearchEvent (B.VtyEvent ev) s =
