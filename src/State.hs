@@ -44,6 +44,7 @@ data Editor = Editor
   , undoLimit    :: Int
   , undoContents :: Seq.Seq (C.Cursor StyleChar)
   , redoContents :: [C.Cursor StyleChar]
+  , saved        :: Int
   }
 
 makeEditor :: UI.UIResource -> F.File -> [[StyleChar]] -> Editor
@@ -56,6 +57,7 @@ makeEditor n f tx =
   , undoLimit = 50
   , undoContents = Seq.Empty
   , redoContents = []
+  , saved = 0
   }
 
 data SearchBarFocus

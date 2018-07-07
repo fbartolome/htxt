@@ -27,13 +27,17 @@ import           Widget.UIResource     as UI
 renderEditor :: Editor -> Bool -> B.Widget UI.UIResource
 renderEditor e f =
   let cursorLocation = B.Location (cursorPosition e)
-  in B.borderWithLabel (B.str $ " " ++ (((F.fileName) . file) e) ++ " ") $
+  in B.borderWithLabel (B.str $ " " ++ fileNameWithSave e ++ " ") $
      B.viewport (editorName e) B.Vertical $
      (if f
         then B.showCursor (editorName e) cursorLocation
         else id) $
      B.visibleRegion cursorLocation (1, 1) $
      renderContents $ adaptContents (size e) ((getLines . contents) e)
+     where
+       fileNameWithSave e
+        | saved e == 0 = ((F.fileName) . file) e
+        | otherwise = "* " ++ ((F.fileName) . file) e ++ " *"
 
 renderContents :: [[StyleChar]] -> B.Widget UI.UIResource
 renderContents scs = B.vBox $ map (\x -> renderLine x) scs
@@ -86,7 +90,6 @@ handleEditorEvent (B.VtyEvent ev) =
     V.EvKey V.KRight [] -> applyEdit moveRight
     V.EvKey V.KDown [] -> handleMoveDown
     V.EvKey V.KUp [] -> handleMoveUp
-    -- TODO: mapear bien los comandos
     V.EvKey (V.KChar 'l') [V.MCtrl] -> applyEdit moveToLineEnd
     V.EvKey (V.KChar 'k') [V.MCtrl] -> applyEdit moveToLineStart
     V.EvKey (V.KChar 'e') [V.MCtrl] -> applyEdit moveToScreenStart
@@ -219,19 +222,22 @@ resize s e = e {size = s}
 -- Undo/Redo
 --
 undo :: Editor -> Editor
-undo (Editor e f c s ul (u Seq.:<| us) rs) = Editor e f u s ul us (c : rs)
+undo (Editor e f c s ul (u Seq.:<| us) rs saved) = Editor e f u s ul us (c : rs) (saved - 1)
 undo s                                     = s
 
 redo :: Editor -> Editor
-redo (Editor e f c s ul us (r:rs)) = Editor e f r s ul (c Seq.<| us) rs
+redo (Editor e f c s ul us (r:rs) saved) = Editor e f r s ul (c Seq.<| us) rs (saved + 1)
 redo s                             = s
 
 pushUndo :: Editor -> Editor
-pushUndo (Editor e f c s ul us rs)
-  | Seq.length us == ul = Editor e f c s ul (updateUndos us) []
-  | otherwise = Editor e f c s ul (c Seq.<| us) []
+pushUndo (Editor e f c s ul us rs saved)
+  | Seq.length us == ul = Editor e f c s ul (updateUndos us) [] $ newSaved saved
+  | otherwise = Editor e f c s ul (c Seq.<| us) []  $ newSaved saved
   where
     updateUndos (us Seq.:|> u) = c Seq.<| us
+    newSaved n
+      | n < 0 = ul + 1
+      | otherwise = n + 1
 
 copy :: Editor -> String
 copy e = L.intercalate "\n" (map toString ((getSelectedLines . contents) e))

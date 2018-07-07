@@ -85,9 +85,10 @@ save :: State -> IO State
 save s = do
   writeFile (F.filePath $ E.file $ S.editor s) $
     foldr (\l h -> (map char l) ++ "\n" ++ h) "" $ getLines cursor
-  return s
+  return s {editor = setSave (\_ -> 0) $ editor s}
   where
     cursor = E.contents $ editor s
+    setSave f e = e {saved = (f . saved) e}
 
 copy :: State -> IO State
 copy s = do
