@@ -2,6 +2,7 @@ module State
   ( State(..)
   , Focus(..)
   , Editor(..)
+  , SearchBarFocus(..)
   , SearchBar(..)
   , newState
   , makeEditor
@@ -13,8 +14,7 @@ import qualified Data.Sequence         as Seq
 
 import           Data.Cursor           as C
 import           Data.File             as F
-import qualified Data.Styled.Style     as S
-import           Data.Styled.StyleChar
+import           Data.Styled.StyleChar as SC
 import           Widget.UIResource     as UI
 
 data Focus
@@ -51,23 +51,32 @@ makeEditor n f tx =
   Editor
   { editorName = n
   , file = f
-  , contents = C.newCursor tx (\(StyleChar c (Attrs sel sea)) -> StyleChar c (Attrs True sea)) (\(StyleChar c (Attrs sel sea)) -> StyleChar c (Attrs False sea))
+  , contents = C.newCursor tx SC.selectionOn SC.selectionOff
   , size = (30, 30) -- TODO: Sacar de algun lado
   , undoLimit = 50
   , undoContents = Seq.Empty
   , redoContents = []
   }
 
+data SearchBarFocus
+  = OnSearch
+  | OnReplace
+  deriving (Eq)
+
 data SearchBar = SearchBar
   { resourceName       :: UI.UIResource
   , query              :: C.Cursor StyleChar
   , currentOccurrences :: [C.Position]
+  , replaceContents    :: C.Cursor StyleChar
+  , searchBarFocus     :: SearchBarFocus
   }
 
 makeSearchBar :: UI.UIResource -> [[StyleChar]] -> SearchBar
 makeSearchBar n tx =
   SearchBar
   { resourceName = n
-  , query = C.newCursor tx (\(StyleChar c (Attrs sel sea)) -> StyleChar c (Attrs True sea)) (\(StyleChar c (Attrs sel sea)) -> StyleChar c (Attrs False sea))
+  , query = C.newCursor tx SC.selectionOn SC.selectionOff
   , currentOccurrences = []
+  , replaceContents = C.newCursor [] SC.selectionOn SC.selectionOff
+  , searchBarFocus = OnSearch
   }
