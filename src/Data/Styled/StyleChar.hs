@@ -4,6 +4,10 @@ module Data.Styled.StyleChar
   , charWnoAttrs
   , styleCharWnoAttrs
   , hasAttrs
+  , selectionOn
+  , selectionOff
+  , searchOn
+  , searchOff
   , renderChar
   , toString
   ) where
@@ -35,6 +39,18 @@ styleCharWnoAttrs (StyleChar c _) = StyleChar c (Attrs False False)
 hasAttrs :: StyleChar -> Bool
 hasAttrs (StyleChar _ (Attrs False False)) = False
 hasAttrs sc                                = True
+
+selectionOn :: StyleChar -> StyleChar
+selectionOn (StyleChar c (Attrs _ sea)) = StyleChar c (Attrs True sea)
+
+selectionOff :: StyleChar -> StyleChar
+selectionOff (StyleChar c (Attrs _ sea)) = StyleChar c (Attrs False sea)
+
+searchOn :: StyleChar -> StyleChar
+searchOn (StyleChar c (Attrs sel _)) = StyleChar c (Attrs sel True)
+
+searchOff :: StyleChar -> StyleChar
+searchOff (StyleChar c (Attrs sel _)) = StyleChar c (Attrs sel False)
 
 renderChar :: StyleChar -> B.Widget UI.UIResource
 renderChar (StyleChar c (Attrs sel sea))

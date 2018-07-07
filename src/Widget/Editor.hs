@@ -6,6 +6,7 @@ module Widget.Editor
   , cut
   , paste
   , resize
+  , replaceAll
   ) where
 
 import qualified Brick                 as B
@@ -238,3 +239,6 @@ cut e = (e {contents = (deleteLeft . contents) e}, copy e)
 
 paste :: String -> Editor -> Editor
 paste s e = (foldl (\h x -> applyEdit (handleInsert x) h) (pushUndo e) s)
+
+replaceAll :: [StyleChar] -> [StyleChar] -> Editor -> Editor
+replaceAll o n e = (pushUndo e) {contents = fst (searchAndReplace o n (contents e))}
