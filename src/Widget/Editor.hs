@@ -87,14 +87,16 @@ handleEditorEvent (B.VtyEvent ev) =
     V.EvKey V.KDown [] -> handleMoveDown
     V.EvKey V.KUp [] -> handleMoveUp
     -- TODO: mapear bien los comandos
-    V.EvKey (V.KChar 'p') [V.MCtrl] -> applyEdit moveToLineEnd
-    V.EvKey (V.KChar 'o') [V.MCtrl] -> applyEdit moveToLineStart
-    V.EvKey (V.KChar 'l') [V.MCtrl] -> applyEdit $ moveUntilNotSpace . moveUntilSpace . moveRight
+    V.EvKey (V.KChar 'l') [V.MCtrl] -> applyEdit moveToLineEnd
+    V.EvKey (V.KChar 'k') [V.MCtrl] -> applyEdit moveToLineStart
+    V.EvKey (V.KChar 'e') [V.MCtrl] -> applyEdit moveToScreenStart
+    V.EvKey (V.KChar 'd') [V.MCtrl] -> applyEdit moveToScreenEnd
+    V.EvKey (V.KChar 'p') [V.MCtrl] -> applyEdit $ moveUntilNotSpace . moveUntilSpace . moveRight
       where
         space = S.charWnoAttrs ' '
         moveUntilSpace = moveRightUntil (space ==) True
         moveUntilNotSpace = moveRightUntil (not . (space  ==)) False
-    V.EvKey (V.KChar 'k') [V.MCtrl] -> applyEdit $ moveUntilSpace . moveUntilNotSpace . moveLeft
+    V.EvKey (V.KChar 'o') [V.MCtrl] -> applyEdit $ moveUntilSpace . moveUntilNotSpace . moveLeft
       where
         space = S.charWnoAttrs ' '
         moveUntilSpace = moveLeftUntil (space ==) True
