@@ -71,7 +71,7 @@ onShow (State sb e f) =
   where
     unselectedE = e {contents = (moveLeft . contents) e}
     sbToLineEnd sb = sb {query = (moveToLineEnd . query) sb}
-    newSB l = sbToLineEnd (makeSearchBar SearchBarContent [map SC.selectionOff l])
+    newSB l = sbToLineEnd (makeSearchBar SearchBarContent [map (SC.setSelection False) l])
 
 onHide :: State -> State
 onHide s = unsearched {editor = newEditor}
@@ -144,7 +144,7 @@ search (State sb e f) = moveToNextOccurrence (State newSB newE f)
     newSB = sb {currentOccurrences = positions}
     newE = e {contents = (moveToPosition p searched)}
     old = (head . getLines . query) sb
-    new = map SC.searchOn old
+    new = map (SC.setSearch True) old
     p = (getCurrentPosition . contents) e
     (searched, positions) = searchAndReplace old new (contents e)
 

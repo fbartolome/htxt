@@ -46,15 +46,25 @@ renderLine :: [StyleChar] -> B.Widget UI.UIResource
 renderLine scs = B.hBox (foldr (\sc h -> (S.renderChar sc) : h) [B.str " "] scs)
 
 adaptContents :: (Int, Int) -> [[StyleChar]] -> [[StyleChar]]
-adaptContents _ [[]] = [[charWnoAttrs ' ']]
-adaptContents (r, _) s = foldr (\line h -> (changeEmptyLine (chunksOf (r - 2) line)) ++ h) [] s
+adaptContents _ [[]] = addLineIndicators [[charWnoAttrs ' ']]
+adaptContents (r, _) s = foldr (\line h -> addLineIndicators (addEmptyLine (chunksOf (r - 4) line)) ++ h) [] s
   where
-    changeEmptyLine [] = [[charWnoAttrs ' ']]
-    changeEmptyLine l  = l
+    addEmptyLine [] = [[charWnoAttrs ' ']]
+    addEmptyLine ls
+      | (length . last) ls == (r - 4) = ls ++ [[charWnoAttrs ' ']]
+      | otherwise = ls
+
+addLineIndicators :: [[StyleChar]] -> [[StyleChar]]
+addLineIndicators (sc:scs) = (lineIndicator ++ sc):(map (\l -> notLineIndicator ++ l) scs)
+  where
+    lineIndicator = S.stringToStyleChars (S.Attrs False False True) "> "
+    notLineIndicator = map (\sc -> sc {char = ' '}) lineIndicator
+addLineIndicators []       = []
+
 
 cursorPosition :: Editor -> (Int, Int)
 cursorPosition e =
-  sum (0, length upAdapted + selAddY) (additionalLength (leftListLength + selAddX) xLimit)
+  sum (2, length upAdapted + selAddY) (additionalLength (leftListLength + selAddX) xLimit)
   where
     upAdapted = adaptContents (size e) ((up . contents) e)
     leftListLength = (length . left . contents) e
@@ -68,7 +78,7 @@ cursorPosition e =
             snd (additionalLength (leftListLength + firstListLength) xLimit) +
             1)
         _ -> (0, 0)
-    xLimit = ((fst . size) e) - 2
+    xLimit = ((fst . size) e) - 4
     sum (x1, y1) (x2, y2) = (x1 + x2, y1 + y2)
 
 additionalLength :: Int -> Int -> (Int, Int)

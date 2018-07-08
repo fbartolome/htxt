@@ -4,10 +4,9 @@ module Data.Styled.StyleChar
   , charWnoAttrs
   , styleCharWnoAttrs
   , hasAttrs
-  , selectionOn
-  , selectionOff
-  , searchOn
-  , searchOff
+  , stringToStyleChars
+  , setSelection
+  , setSearch
   , renderChar
   , toString
   ) where
@@ -18,8 +17,9 @@ import qualified Widget.UIResource as UI
 import qualified Data.Styled.Style as S
 
 data Attrs = Attrs
-  { selected :: Bool
-  , searched :: Bool
+  { selected        :: Bool
+  , searched        :: Bool
+  , lineIndicator   :: Bool
   }
 
 data StyleChar = StyleChar
@@ -31,29 +31,27 @@ instance Eq StyleChar where
   sc1 == sc2 = (char sc1) == (char sc2)
 
 charWnoAttrs :: Char -> StyleChar
-charWnoAttrs c = StyleChar c (Attrs False False)
+charWnoAttrs c = StyleChar c (Attrs False False False)
 
 styleCharWnoAttrs :: StyleChar -> StyleChar
-styleCharWnoAttrs (StyleChar c _) = StyleChar c (Attrs False False)
+styleCharWnoAttrs (StyleChar c _) = StyleChar c (Attrs False False False)
+
+stringToStyleChars :: Attrs -> String -> [StyleChar]
+stringToStyleChars attrs str = map (\ch -> StyleChar ch attrs) str
 
 hasAttrs :: StyleChar -> Bool
-hasAttrs (StyleChar _ (Attrs False False)) = False
-hasAttrs sc                                = True
+hasAttrs (StyleChar _ (Attrs False False False)) = False
+hasAttrs sc                                      = True
 
-selectionOn :: StyleChar -> StyleChar
-selectionOn (StyleChar c (Attrs _ sea)) = StyleChar c (Attrs True sea)
+setSelection :: Bool -> StyleChar -> StyleChar
+setSelection b (StyleChar c attrs) = StyleChar c $ attrs {selected = b}
 
-selectionOff :: StyleChar -> StyleChar
-selectionOff (StyleChar c (Attrs _ sea)) = StyleChar c (Attrs False sea)
-
-searchOn :: StyleChar -> StyleChar
-searchOn (StyleChar c (Attrs sel _)) = StyleChar c (Attrs sel True)
-
-searchOff :: StyleChar -> StyleChar
-searchOff (StyleChar c (Attrs sel _)) = StyleChar c (Attrs sel False)
+setSearch :: Bool -> StyleChar -> StyleChar
+setSearch b (StyleChar c attrs) = StyleChar c $ attrs {searched = b}
 
 renderChar :: StyleChar -> B.Widget UI.UIResource
-renderChar (StyleChar c (Attrs sel sea))
+renderChar (StyleChar c (Attrs sel sea li))
+  | li = B.withAttr S.lineIndicator $ B.str [c]
   | sel && sea = B.withAttr S.searchAndSelected $ B.str [c]
   | sel && not sea = B.withAttr S.selected $ B.str [c]
   | not sel && sea = B.withAttr S.search $ B.str [c]

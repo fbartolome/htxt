@@ -52,7 +52,7 @@ makeEditor n f tx =
   Editor
   { editorName = n
   , file = f
-  , contents = C.newCursor tx SC.selectionOn SC.selectionOff
+  , contents = C.newCursor tx (SC.setSelection True) (SC.setSelection False)
   , size = (30, 30) -- TODO: Sacar de algun lado
   , undoLimit = 50
   , undoContents = Seq.Empty
@@ -77,8 +77,8 @@ makeSearchBar :: UI.UIResource -> [[StyleChar]] -> SearchBar
 makeSearchBar n tx =
   SearchBar
   { resourceName = n
-  , query = C.newCursor tx SC.selectionOn SC.selectionOff
+  , query = C.newCursor tx (SC.setSelection True) (SC.setSelection False)
   , currentOccurrences = []
-  , replaceContents = C.newCursor [] SC.selectionOn SC.selectionOff
+  , replaceContents = C.newCursor [] (SC.setSelection True) (SC.setSelection False)
   , searchBarFocus = OnSearch
   }
