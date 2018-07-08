@@ -185,7 +185,7 @@ handleMoveDown e
       (applyEdit (moveDown . moveToLineStart) e)
       [1 .. movingCharsFromLeft]
   where
-    terminalLength = ((fst $ size e) - 2)
+    terminalLength = ((fst $ size e) - 4)
     rightOnCursor = (length $ right $ contents e)
     leftOnTerminal = (length $ left $ contents e) `mod` terminalLength
     rightOnTerminal = terminalLength - leftOnTerminal
@@ -211,7 +211,7 @@ handleMoveUp e
       (applyEdit (moveUp . moveToLineStart) e)
       [1 .. movingCharsFromLeft]
   where
-    terminalLength = ((fst $ size e) - 2)
+    terminalLength = ((fst $ size e) - 4)
     leftOnCursor = (length $ left $ contents e)
     leftOnTerminal = (length $ left $ contents e) `mod` terminalLength
     upLineCursorLength = (length $ head $ up $ contents e)
