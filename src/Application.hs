@@ -2,23 +2,25 @@ module Application
   ( start
   ) where
 
-import qualified Brick                  as B
-import           Brick.BChan            as B
+import qualified Brick                        as B
+import           Brick.BChan                  as B
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Data.List.Split
-import qualified Graphics.Vty           as V
-import qualified System.Hclip           as HC
+import           Data.Maybe
+import qualified Graphics.Vty                 as V
+import qualified System.Console.Terminal.Size as TS
+import qualified System.Hclip                 as HC
 import           System.IO
 
 import           Data.Cursor
-import           Data.File              as F
+import           Data.File                    as F
 import           Data.Styled.Style
 import           Data.Styled.StyleChar
-import           State                  as S
-import qualified Widget.Editor          as E
-import qualified Widget.SearchBar       as SB
-import           Widget.UIResource      as UI
+import           State                        as S
+import qualified Widget.Editor                as E
+import qualified Widget.SearchBar             as SB
+import           Widget.UIResource            as UI
 
 start :: [String] -> IO ()
 start args = do
@@ -26,6 +28,7 @@ start args = do
     [file] -> do
       handle <- openFile file ReadWriteMode
       text <- hGetContents handle
+      window <- TS.size
       let app =
             B.App
             { B.appDraw = renderApp
@@ -34,13 +37,17 @@ start args = do
             , B.appChooseCursor = B.showFirstCursor
             , B.appAttrMap = const theMap
             }
+          window' = getWindow window
           initState =
-            S.newState (F.makeFile file) $ map (map (\c -> charWnoAttrs c)) $ splitOn "\n" text
+            S.newState (F.makeFile file) (map (map (\c -> charWnoAttrs c)) (splitOn "\n" text)) (TS.width window', TS.height window')
           -- TODO: tener en cuenta los tabs
       eventChan <- B.newBChan 10
       void $ B.customMain (V.mkVty V.defaultConfig) (Just eventChan) app initState
     [] -> putStrLn noArguments
     _ -> putStrLn tooManyArguments
+    where
+      getWindow Nothing = TS.Window 30 30 -- Default Value
+      getWindow w       = fromJust w
 
 renderApp :: State -> [B.Widget UI.UIResource]
 renderApp (State sb e f) =

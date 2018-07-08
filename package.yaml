@@ -29,6 +29,7 @@ dependencies:
 - transformers
 - containers
 - Hclip
+- terminal-size
 
 library:
   source-dirs: src
