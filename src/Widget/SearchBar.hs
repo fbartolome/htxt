@@ -74,6 +74,7 @@ onShow (State sb e f) =
     newSB l = sbToLineEnd (makeSearchBar SearchBarContent [map (SC.setSelection False) l])
 
 onHide :: State -> State
+onHide (State (SearchBar rn q [] rc sbf) e f) = (State (SearchBar rn q [] rc sbf) e f)
 onHide s = unsearched {editor = newEditor}
   where
     unsearched = unsearch s

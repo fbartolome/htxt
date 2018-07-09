@@ -60,7 +60,7 @@ onStart = return
 
 handleAppEvent ::
      State -> B.BrickEvent UI.UIResource UIEvent -> B.EventM UI.UIResource (B.Next State)
-handleAppEvent s (B.VtyEvent (V.EvKey V.KEsc [])) = B.halt s
+handleAppEvent s (B.VtyEvent (V.EvKey (V.KChar 'q') [V.MCtrl])) = B.halt s
 handleAppEvent s (B.VtyEvent (V.EvKey (V.KChar 's') [V.MCtrl])) = liftIO (save s) >>= B.continue
 handleAppEvent s (B.VtyEvent (V.EvKey (V.KChar 'c') [V.MCtrl])) = liftIO (copy s) >>= B.continue
 handleAppEvent s (B.VtyEvent (V.EvKey (V.KChar 'x') [V.MCtrl])) = liftIO (cut s) >>= B.continue
