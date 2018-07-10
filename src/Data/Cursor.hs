@@ -36,7 +36,6 @@ module Data.Cursor
   , replace
   , getCurrentPosition
   , getLines
-  , (-:)
   ) where
 
 import           Prelude hiding (Left, Right)
@@ -68,7 +67,7 @@ data Cursor a = Cursor
                 , down      :: [[a]]
                 , selection :: Maybe (Selection a)
                 , onSelect  :: (a -> a)
-                , onUnelect :: (a -> a)
+                , onUnselect :: (a -> a)
                 }
               -- deriving (Show)
 
@@ -76,7 +75,7 @@ empty :: Cursor a
 empty = Cursor [] [] [] [] Nothing id id
 
 newCursor :: [[a]] -> (a -> a) -> (a -> a) -> Cursor a
-newCursor [] _ _       = empty
+newCursor [] os ou     = Cursor [] [] [] [] Nothing os ou
 newCursor (e:es) os ou = Cursor [] e [] es Nothing os ou
 
 -- Content
@@ -309,10 +308,6 @@ getLines (Cursor ls rs us ds s _ _) =
   where
     us' = reverse $ map reverse us
     ls' = reverse ls
-
--- Testing
-
-(-:) x f = f x -- TODO remove
 
 -- Private
 
