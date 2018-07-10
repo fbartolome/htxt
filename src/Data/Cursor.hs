@@ -259,7 +259,7 @@ selectRight (Cursor ls rs us ds (Just (ML (su:sus) sls sds Left)) os ou) = Curso
 selectRight c                                                            = c
 
 selectAll :: Cursor a -> Cursor a
-selectAll (Cursor [] rs [] [] Nothing os ou) = Cursor [] [] [] [] (Just (SL (map ou rs) Left)) os ou
+selectAll (Cursor [] rs [] [] Nothing os ou) = Cursor [] [] [] [] (Just (SL (map os rs) Left)) os ou
 selectAll (Cursor [] rs [] ds Nothing os ou) = Cursor [] [] [] [] (Just (ML (map os rs) (map (map os) body) (map os lastElem) Left)) os ou
   where
     (lastElem, body) = (\(x:xs) -> (x, reverse xs)) $ reverse ds

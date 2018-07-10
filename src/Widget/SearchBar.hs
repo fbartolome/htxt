@@ -96,6 +96,7 @@ handleSearchEvent (B.VtyEvent ev) s =
     -- Selection
     V.EvKey V.KLeft [V.MShift] -> updateSearchBar (applyEdit selectLeft (searchBar s)) s
     V.EvKey V.KRight [V.MShift] -> updateSearchBar (applyEdit selectRight (searchBar s)) s
+    V.EvKey (V.KChar 'a') [V.MCtrl] -> updateSearchBar (applyEdit selectAll (searchBar s)) s
     -- Other
     _ -> s
   where
