@@ -21,8 +21,6 @@ module Data.Cursor
   , moveDown
   , moveToLineStart
   , moveToLineEnd
-  , moveToScreenTop
-  , moveToScreenBottom
   , moveToScreenStart
   , moveToScreenEnd
   , moveToPosition
@@ -32,12 +30,16 @@ module Data.Cursor
   , selectRight
   , selectUp
   , selectDown
+  , selectToLineStart
+  , selectToLineEnd
   , selectAll
   , getSelectedLines
   , searchAndReplace
   , replace
   , getCurrentPosition
   , getLines
+  , doRightUntil
+  , doLeftUntil
   ) where
 
 import           Prelude hiding (Left, Right)
@@ -173,29 +175,23 @@ moveDown (Cursor ls rs us (d:ds) Nothing os ou) = Cursor (reverse firstPart) las
     (firstPart, lastPart) = splitAt (length ls) d
 moveDown (Cursor ls rs us ds (Just s) os ou)    = moveDown $ moveToSelectionEnd (Cursor ls rs us ds (Just s) os ou)
 
+moveLeftUntil :: (a -> Bool) -> Bool -> Cursor a -> Cursor a
+moveLeftUntil eq b c = doLeftUntil eq b moveLeft c
+
+moveRightUntil :: (a -> Bool) -> Bool -> Cursor a -> Cursor a
+moveRightUntil eq b c = doRightUntil eq b moveRight c
+
 moveToLineStart :: Cursor a -> Cursor a
-moveToLineStart (Cursor ls rs us ds Nothing os ou) = Cursor [] (reverse ls ++ rs) us ds Nothing os ou
-moveToLineStart c                                  = moveToLineStart $ moveToSelectionStart c
+moveToLineStart c = moveLeftUntil (\_ -> False) True c
 
 moveToLineEnd :: Cursor a -> Cursor a
-moveToLineEnd (Cursor ls rs us ds Nothing os ou) = Cursor (reverse rs ++ ls) [] us ds Nothing os ou
-moveToLineEnd c                                  = moveToLineEnd $ moveToSelectionEnd c
-
-moveToScreenTop :: Cursor a -> Cursor a
-moveToScreenTop (Cursor ls rs [] ds Nothing os ou)  = Cursor ls rs [] ds Nothing os ou
-moveToScreenTop (Cursor ls rs us ds (Just s) os ou) = moveToLineStart $ moveToSelectionStart (Cursor ls rs us ds (Just s) os ou)
-moveToScreenTop c                                   = moveToScreenTop $ moveUp c
-
-moveToScreenBottom :: Cursor a -> Cursor a
-moveToScreenBottom (Cursor ls rs us [] Nothing os ou)  = Cursor ls rs us [] Nothing os ou
-moveToScreenBottom (Cursor ls rs us ds (Just s) os ou) = moveToLineEnd $ moveToSelectionEnd (Cursor ls rs us ds (Just s) os ou)
-moveToScreenBottom c                                   = moveToScreenBottom $ moveDown c
+moveToLineEnd c = moveRightUntil (\_ -> False) True c
 
 moveToScreenStart :: Cursor a -> Cursor a
-moveToScreenStart c = moveToScreenTop $ moveToLineStart c
+moveToScreenStart c = moveLeftUntil (\_ -> False) False c
 
 moveToScreenEnd :: Cursor a -> Cursor a
-moveToScreenEnd c = moveToScreenBottom $ moveToLineEnd c
+moveToScreenEnd c = moveRightUntil (\_ -> False) False c
 
 moveToPosition ::  Position -> Cursor a -> Cursor a
 moveToPosition (row, col) c
@@ -206,26 +202,6 @@ moveToPosition (row, col) c
   | otherwise = c
   where
     (currRow, currCol) = getCurrentPosition c
-
-moveRightUntil :: (a -> Bool) -> Bool -> Cursor a -> Cursor a
-moveRightUntil f untilLineEnd (Cursor ls [] us [] Nothing os ou) = (Cursor ls [] us [] Nothing os ou)
-moveRightUntil f untilLineEnd (Cursor ls [] us ds Nothing os ou)
-  | untilLineEnd = moveRight (Cursor ls [] us ds Nothing os ou)
-  | otherwise = moveRightUntil f untilLineEnd $ moveRight (Cursor ls [] us ds Nothing os ou)
-moveRightUntil f untilLineEnd (Cursor ls (r:rs) us ds Nothing os ou)
-  | f r = Cursor ls (r:rs) us ds Nothing os ou
-  | otherwise = moveRightUntil f untilLineEnd $ Cursor (r:ls) rs us ds Nothing os ou
-moveRightUntil f untilLineEnd c = moveRightUntil f untilLineEnd $ moveRight c
-
-moveLeftUntil :: (a -> Bool) -> Bool -> Cursor a -> Cursor a
-moveLeftUntil f untilLineStart (Cursor [] rs [] ds Nothing os ou) = (Cursor [] rs [] ds Nothing os ou)
-moveLeftUntil f untilLineStart (Cursor [] rs us ds Nothing os ou)
-  | untilLineStart = Cursor [] rs us ds Nothing os ou
-  | otherwise = moveLeftUntil f untilLineStart $ moveLeft (Cursor [] rs us ds Nothing os ou)
-moveLeftUntil f untilLineStart (Cursor (l:ls) rs us ds Nothing os ou)
-  | f l = Cursor (l:ls) rs us ds Nothing os ou
-  | otherwise = moveLeftUntil f untilLineStart $ Cursor ls (l:rs) us ds Nothing os ou
-moveLeftUntil f untilLineStart c = moveLeftUntil f untilLineStart $ moveRight c
 
 -- Selection
 
@@ -335,12 +311,21 @@ nonNegative n
   | n < 0     = 0
   | otherwise = n
 
+selectLeftUntil :: (a -> Bool) -> Bool -> Cursor a -> Cursor a
+selectLeftUntil eq b c = doLeftUntil eq b selectLeft c
+
+selectRightUntil :: (a -> Bool) -> Bool -> Cursor a -> Cursor a
+selectRightUntil eq b c = doRightUntil eq b selectRight c
+
+selectToLineStart :: Cursor a -> Cursor a
+selectToLineStart c = selectLeftUntil (\_ -> False) True c
+
+selectToLineEnd :: Cursor a -> Cursor a
+selectToLineEnd c = selectRightUntil (\_ -> False) True c
+
 selectAll :: Cursor a -> Cursor a
-selectAll (Cursor [] rs [] [] Nothing os ou) = Cursor [] [] [] [] (Just (SL (map os rs) Left)) os ou
-selectAll (Cursor [] rs [] ds Nothing os ou) = Cursor [] [] [] [] (Just (ML (map os rs) (map (map os) body) (map os lastElem) Left)) os ou
-  where
-    (lastElem, body) = (\(x:xs) -> (x, reverse xs)) $ reverse ds
-selectAll c = selectAll $ moveToScreenStart c
+selectAll (Cursor [] rs [] ds Nothing os ou) = selectRightUntil (\_ -> False) False $ (Cursor [] rs [] ds Nothing os ou)
+selectAll c = selectAll $ (moveLeft . moveToScreenStart) c
 
 getSelectedLines :: Cursor a -> [[a]]
 getSelectedLines c =
@@ -386,6 +371,38 @@ getLines (Cursor ls rs us ds s _ _) =
   where
     us' = reverse $ map reverse us
     ls' = reverse ls
+
+-- Abstract
+
+doRightUntil :: (a -> Bool) -> Bool -> (Cursor a -> Cursor a) -> Cursor a -> Cursor a
+doRightUntil eq untilLineEnd f (Cursor ls [] us [] s os ou) = (Cursor ls [] us [] s os ou)
+doRightUntil eq untilLineEnd f (Cursor ls [] us ds s os ou)
+  | untilLineEnd = Cursor ls [] us ds s os ou
+  | otherwise = doRightUntil eq untilLineEnd f $ f (Cursor ls [] us ds s os ou)
+doRightUntil eq b f (Cursor ls rs us ds (Just (SL (x:xs) Left)) os ou)
+  | eq x = Cursor ls rs us ds (Just (SL (x:xs) Left)) os ou
+  | otherwise = doRightUntil eq b f $ f (Cursor ls rs us ds (Just (SL (x:xs) Left)) os ou)
+doRightUntil eq b f (Cursor ls rs us ds (Just (ML fl lb (x:xs) Left)) os ou)
+  | eq x = Cursor ls rs us ds (Just (ML fl lb (x:xs) Left)) os ou
+  | otherwise = doRightUntil eq b f $ f (Cursor ls rs us ds (Just (ML fl lb (x:xs) Left)) os ou)
+doRightUntil eq b f (Cursor ls (r:rs) us ds s os ou)
+  | eq r = Cursor ls (r:rs) us ds s os ou
+  | otherwise = doRightUntil eq b f $ f (Cursor ls (r:rs) us ds s os ou)
+
+doLeftUntil :: (a -> Bool) -> Bool -> (Cursor a -> Cursor a) -> Cursor a -> Cursor a
+doLeftUntil eq untilLineStart f (Cursor [] rs [] ds s os ou) = (Cursor [] rs [] ds s os ou)
+doLeftUntil eq untilLineStart f (Cursor [] rs us ds s os ou)
+  | untilLineStart = Cursor [] rs us ds s os ou
+  | otherwise = doLeftUntil eq untilLineStart f $ f (Cursor [] rs us ds s os ou)
+doLeftUntil eq b f (Cursor ls rs us ds (Just (SL (x:xs) Right)) os ou)
+  | eq x = Cursor ls rs us ds (Just (SL (x:xs) Right)) os ou
+  | otherwise = doLeftUntil eq b f $ f (Cursor ls rs us ds (Just (SL (x:xs) Right)) os ou)
+doLeftUntil eq b f (Cursor ls rs us ds (Just (ML fl lb (x:xs) Right)) os ou)
+  | eq x = Cursor ls rs us ds (Just (ML fl lb (x:xs) Right)) os ou
+  | otherwise = doLeftUntil eq b f $ f (Cursor ls rs us ds (Just (ML fl lb (x:xs) Right)) os ou)
+doLeftUntil eq b f (Cursor (l:ls) rs us ds s os ou)
+  | eq l = Cursor (l:ls) rs us ds s os ou
+  | otherwise = doLeftUntil eq b f $ f (Cursor (l:ls) rs us ds s os ou)
 
 -- Private
 

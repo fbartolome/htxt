@@ -119,6 +119,8 @@ handleEditorEvent (B.VtyEvent ev) =
     V.EvKey V.KRight [V.MShift] -> applyEdit selectRight
     V.EvKey V.KDown [V.MShift] -> applyEdit selectDown
     V.EvKey V.KUp [V.MShift] -> applyEdit selectUp
+    V.EvKey (V.KChar 'r') [V.MCtrl] -> applyEdit selectToLineStart
+    V.EvKey (V.KChar 'u') [V.MCtrl] -> applyEdit selectToLineEnd
     V.EvKey (V.KChar 'a') [V.MCtrl] -> applyEdit selectAll
     -- Move content
     V.EvKey (V.KChar 't')  [V.MCtrl] -> applyEdit moveLinesWithSelectionUp
