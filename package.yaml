@@ -1,6 +1,6 @@
-name:                text-editor
+name:                htxt
 version:             0.1.0.0
-github:              "githubuser/text-editor"
+github:              "githubuser/htxt"
 license:             BSD3
 author:              "Author name here"
 maintainer:          "example@example.com"
@@ -17,16 +17,25 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on Github at <https://github.com/githubuser/text-editor#readme>
+description:         Please see the README on GitHub at <https://github.com/githubuser/htxt#readme>
 
 dependencies:
 - base >= 4.7 && < 5
+- brick
+- vty
+- MissingH
+- split
+- text
+- transformers
+- containers
+- Hclip
+- terminal-size
 
 library:
   source-dirs: src
 
 executables:
-  text-editor-exe:
+  htxt:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
@@ -34,10 +43,10 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - text-editor
+    - htxt
 
 tests:
-  text-editor-test:
+  htxt-test:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
@@ -45,4 +54,4 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - text-editor
+    - htxt
