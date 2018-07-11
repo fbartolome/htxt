@@ -232,13 +232,13 @@ selectLeft (Cursor [] rs (u:us) ds Nothing os ou)                        = Curso
 selectLeft (Cursor (l:ls) rs us ds Nothing os ou)                        = Cursor ls rs us ds (Just (SL [os l] Left)) os ou
 selectLeft (Cursor [] rs (u:us) ds (Just (SL ss Left)) os ou)            = Cursor u rs us ds (Just (ML [] [] ss Left)) os ou
 selectLeft (Cursor (l:ls) rs us ds (Just (SL ss Left)) os ou)            = Cursor ls rs us ds (Just (SL ((os l):ss) Left)) os ou
-selectLeft (Cursor [] rs (u:us) ds (Just (ML sus sls sds Left)) os ou)   = Cursor u rs us ds (Just (ML [] (sus:sls) sds Left)) os ou
-selectLeft (Cursor (l:ls) rs us ds (Just (ML sus sls sds Left)) os ou)   = Cursor ls rs us ds (Just (ML ((os l):sus) sls sds Left)) os ou
 selectLeft (Cursor ls rs us ds (Just (SL [s] Right)) os ou)              = Cursor ls ((ou s):rs) us ds Nothing os ou
 selectLeft (Cursor ls rs us ds (Just (SL (s:ss) Right)) os ou)           = Cursor ls ((ou s):rs) us ds (Just (SL ss Right)) os ou
-selectLeft (Cursor ls rs (u:us) ds (Just (ML [] [] [] Right)) os ou)     = Cursor u [] us (rs:ds) Nothing os ou
+selectLeft (Cursor [] rs (u:us) ds (Just (ML sus sls sds Left)) os ou)   = Cursor u rs us ds (Just (ML [] (sus:sls) sds Left)) os ou
+selectLeft (Cursor (l:ls) rs us ds (Just (ML sus sls sds Left)) os ou)   = Cursor ls rs us ds (Just (ML ((os l):sus) sls sds Left)) os ou
+selectLeft (Cursor ls rs us ds (Just (ML [] [] [] Right)) os ou)         = Cursor ls [] us (rs:ds) Nothing os ou
 selectLeft (Cursor ls rs us ds (Just (ML sus [] [] Right)) os ou)        = Cursor ls [] us (rs:ds) (Just (SL sus Right)) os ou
-selectLeft (Cursor ls rs us ds (Just (ML sus (sl:sls) [] Right)) os ou)  = Cursor ls [] us (rs:ds) (Just (ML sus [] sl Right)) os ou
+selectLeft (Cursor ls rs us ds (Just (ML sus (sl:sls) [] Right)) os ou)  = Cursor ls [] us (rs:ds) (Just (ML sus sls sl Right)) os ou
 selectLeft (Cursor ls rs us ds (Just (ML sus sls (sd:sds) Right)) os ou) = Cursor ls (ou sd:rs) us ds (Just (ML sus sls sds Right)) os ou
 selectLeft c                                                             = c
 
@@ -251,7 +251,7 @@ selectRight (Cursor ls [] us (d:ds) (Just (ML sus sls sds Right)) os ou) = Curso
 selectRight (Cursor ls (r:rs) us ds (Just (ML sus sls sds Right)) os ou) = Cursor ls rs us ds (Just (ML sus sls (os r:sds) Right)) os ou
 selectRight (Cursor ls rs us ds (Just (SL [s] Left)) os ou)              = Cursor (ou s:ls) rs us ds Nothing os ou
 selectRight (Cursor ls rs us ds (Just (SL (s:ss) Left)) os ou)           = Cursor (ou s:ls) rs us ds (Just (SL ss Left)) os ou
-selectRight (Cursor ls rs us (d:ds) (Just (ML [] [] [] Left)) os ou)     = Cursor [] d (ls:us) ds Nothing os ou
+selectRight (Cursor ls rs us ds (Just (ML [] [] [] Left)) os ou)         = Cursor [] rs (ls:us) ds Nothing os ou
 selectRight (Cursor ls rs us ds (Just (ML [] [] sds Left)) os ou)        = Cursor [] rs (ls:us) ds (Just (SL sds Left)) os ou
 selectRight (Cursor ls rs us ds (Just (ML [] (sl:sls) sds Left)) os ou)  = Cursor [] rs (ls:us) ds (Just (ML sl sls sds Left)) os ou
 selectRight (Cursor ls rs us ds (Just (ML (su:sus) sls sds Left)) os ou) = Cursor (ou su:ls) rs us ds (Just (ML sus sls sds Left)) os ou
@@ -270,7 +270,7 @@ getSelectedLines c =
     Just (SL ss Left)           -> [ss]
     Just (SL ss Right)          -> [reverse ss]
     Just (ML sus sls sds Left)  -> (sus : sls) ++ [sds]
-    Just (ML sus sls sds Right) -> ((reverse sus) : (map reverse sls)) ++ [sds]
+    Just (ML sus sls sds Right) -> ((reverse sus) : (reverse $ map reverse sls)) ++ [reverse sds]
     _                           -> []
 
 -- Replace
