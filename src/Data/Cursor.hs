@@ -30,6 +30,8 @@ module Data.Cursor
   , moveLeftUntil
   , selectLeft
   , selectRight
+  , selectUp
+  , selectDown
   , selectAll
   , getSelectedLines
   , searchAndReplace
@@ -61,12 +63,12 @@ data Selection a = SL -- Single line
                  -- deriving (Show)
 
 data Cursor a = Cursor
-                { left      :: [a]
-                , right     :: [a]
-                , up        :: [[a]]
-                , down      :: [[a]]
-                , selection :: Maybe (Selection a)
-                , onSelect  :: (a -> a)
+                { left       :: [a]
+                , right      :: [a]
+                , up         :: [[a]]
+                , down       :: [[a]]
+                , selection  :: Maybe (Selection a)
+                , onSelect   :: (a -> a)
                 , onUnselect :: (a -> a)
                 }
               -- deriving (Show)
@@ -256,6 +258,82 @@ selectRight (Cursor ls rs us ds (Just (ML [] [] sds Left)) os ou)        = Curso
 selectRight (Cursor ls rs us ds (Just (ML [] (sl:sls) sds Left)) os ou)  = Cursor [] rs (ls:us) ds (Just (ML sl sls sds Left)) os ou
 selectRight (Cursor ls rs us ds (Just (ML (su:sus) sls sds Left)) os ou) = Cursor (ou su:ls) rs us ds (Just (ML sus sls sds Left)) os ou
 selectRight c                                                            = c
+
+selectUp :: Cursor a -> Cursor a
+selectUp (Cursor ls rs us ds (Just (ML sus [] sds Right)) os ou) =
+  applyNTimes (length sds + 1 + upLeftTimes) selectLeft (Cursor ls rs us ds (Just (ML sus [] sds Right)) os ou)
+  where
+    upLeftTimes = nonNegative (length ls + length sus - length sds)
+selectUp (Cursor ls rs us ds (Just (ML sus (sl:sls) sds Right)) os ou) =
+  applyNTimes (length sds + 1 + upLeftTimes) selectLeft (Cursor ls rs us ds (Just (ML sus (sl:sls) sds Right)) os ou)
+  where
+    upLeftTimes = nonNegative (length sl - length sds)
+selectUp (Cursor ls rs [] ds sel os ou) =
+  let times =
+            case sel of
+              Nothing                    -> length ls
+              Just (SL ss Left)          -> length ls
+              Just (SL ss Right)         -> length ls + length ss
+              Just (ML sus sls sds Left) -> length ls
+  in applyNTimes times selectLeft (Cursor ls rs [] ds sel os ou)
+selectUp (Cursor ls rs (u:us) ds sel os ou) =
+  let times =
+            case sel of
+              Nothing                    -> length ls + 1 + upLeftTimes
+              Just (SL ss Left)          -> length ls + 1 + upLeftTimes
+              Just (SL ss Right)         -> length ls + 1 + upLeftTimes' ss + length ss
+              Just (ML sus sls sds Left) -> length ls + 1 + upLeftTimes
+  in applyNTimes times selectLeft (Cursor ls rs (u:us) ds sel os ou)
+  where
+    upLeftTimes     = nonNegative (length u - length ls)
+    upLeftTimes' ss = nonNegative (length u - (length ls + length ss))
+
+selectDown :: Cursor a -> Cursor a
+selectDown (Cursor ls rs us ds (Just (ML sus [] sds Left)) os ou) =
+  applyNTimes (length sus + 1 + downLeftTimes) selectRight (Cursor ls rs us ds (Just (ML sus [] sds Left)) os ou)
+  where
+    downLeftTimes
+      | length ls < (length sds + length rs) = length ls
+      | otherwise                            = length sds + length rs
+selectDown (Cursor ls rs us ds (Just (ML sus (sl:sls) sds Left)) os ou) =
+  applyNTimes (length sus + 1 + downLeftTimes) selectRight (Cursor ls rs us ds (Just (ML sus (sl:sls) sds Left)) os ou)
+  where
+    downLeftTimes
+      | length ls < length sl = length ls
+      | otherwise             = length sl
+selectDown (Cursor ls rs us [] sel os ou) =
+  let times =
+            case sel of
+              Nothing                     -> length rs
+              Just (SL ss Left)           -> length rs + length ss
+              Just (SL ss Right)          -> length rs
+              Just (ML sus sls sds Right) -> length rs
+  in applyNTimes times selectRight (Cursor ls rs us [] sel os ou)
+selectDown (Cursor ls rs us (d:ds) sel os ou) =
+  let times =
+            case sel of
+              Nothing                     -> length rs + 1 + downLeftTimes ls
+              Just (SL ss Left)           -> length ss + length rs + 1 + downLeftTimes ls
+              Just (SL ss Right)          -> length rs + 1 + downLeftTimes' ss
+              Just (ML sus sls sds Right) -> length sus + 1 + downLeftTimes sds
+  in applyNTimes times selectRight (Cursor ls rs us (d:ds) sel os ou)
+  where
+    downLeftTimes s
+      | length s < length d = length s
+      | otherwise           = length d
+    downLeftTimes' ss
+      | length ls + length ss < length d = length ls + length ss
+      | otherwise                        = length d
+
+applyNTimes :: (Num n, Ord n) => n -> (a -> a) -> a -> a
+applyNTimes 0 f x = x
+applyNTimes 1 f x = f x
+applyNTimes n f x = f (applyNTimes (n-1) f x)
+
+nonNegative :: (Num n, Ord n) => n -> n
+nonNegative n
+  | n < 0     = 0
+  | otherwise = n
 
 selectAll :: Cursor a -> Cursor a
 selectAll (Cursor [] rs [] [] Nothing os ou) = Cursor [] [] [] [] (Just (SL (map os rs) Left)) os ou

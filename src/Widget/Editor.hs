@@ -117,10 +117,12 @@ handleEditorEvent (B.VtyEvent ev) =
     -- Selection
     V.EvKey V.KLeft [V.MShift] -> applyEdit selectLeft
     V.EvKey V.KRight [V.MShift] -> applyEdit selectRight
+    V.EvKey V.KDown [V.MShift] -> applyEdit selectDown
+    V.EvKey V.KUp [V.MShift] -> applyEdit selectUp
     V.EvKey (V.KChar 'a') [V.MCtrl] -> applyEdit selectAll
     -- Move content
-    V.EvKey V.KDown [V.MShift] -> applyEdit moveLinesWithSelectionDown
-    V.EvKey V.KUp [V.MShift] -> applyEdit moveLinesWithSelectionUp
+    V.EvKey (V.KChar 't')  [V.MCtrl] -> applyEdit moveLinesWithSelectionUp
+    V.EvKey (V.KChar 'g')  [V.MCtrl] -> applyEdit moveLinesWithSelectionDown
     -- Undo/Redo
     V.EvKey (V.KChar 'z') [V.MCtrl] -> undo
     V.EvKey (V.KChar 'y') [V.MCtrl] -> redo
