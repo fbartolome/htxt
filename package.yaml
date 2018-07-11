@@ -35,7 +35,7 @@ library:
   source-dirs: src
 
 executables:
-  htxt-exe:
+  htxt:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
