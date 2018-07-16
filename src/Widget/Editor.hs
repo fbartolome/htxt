@@ -34,10 +34,10 @@ renderEditor e f =
         else id) $
      B.visibleRegion cursorLocation (1, 1) $
      renderContents $ adaptContents (size e) ((getLines . contents) e)
-     where
-       fileNameWithSave e
-        | saved e == 0 = ((F.fileName) . file) e
-        | otherwise = "* " ++ ((F.fileName) . file) e ++ " *"
+  where
+    fileNameWithSave e
+      | saved e == 0 = ((F.fileName) . file) e
+      | otherwise = "* " ++ ((F.fileName) . file) e ++ " *"
 
 renderContents :: [[StyleChar]] -> B.Widget UI.UIResource
 renderContents scs = B.vBox $ map (\x -> renderLine x) scs
@@ -47,7 +47,8 @@ renderLine scs = B.hBox (foldr (\sc h -> (S.renderChar sc) : h) [B.str " "] scs)
 
 adaptContents :: (Int, Int) -> [[StyleChar]] -> [[StyleChar]]
 adaptContents _ [[]] = addLineIndicators [[charWnoAttrs ' ']]
-adaptContents (r, _) s = foldr (\line h -> addLineIndicators (addEmptyLine (chunksOf (r - 4) line)) ++ h) [] s
+adaptContents (r, _) s =
+  foldr (\line h -> addLineIndicators (addEmptyLine (chunksOf (r - 4) line)) ++ h) [] s
   where
     addEmptyLine [] = [[charWnoAttrs ' ']]
     addEmptyLine ls
@@ -55,12 +56,11 @@ adaptContents (r, _) s = foldr (\line h -> addLineIndicators (addEmptyLine (chun
       | otherwise = ls
 
 addLineIndicators :: [[StyleChar]] -> [[StyleChar]]
-addLineIndicators (sc:scs) = (lineIndicator ++ sc):(map (\l -> notLineIndicator ++ l) scs)
+addLineIndicators (sc:scs) = (lineIndicator ++ sc) : (map (\l -> notLineIndicator ++ l) scs)
   where
     lineIndicator = S.stringToStyleChars (S.Attrs False False True) "> "
     notLineIndicator = map (\sc -> sc {char = ' '}) lineIndicator
-addLineIndicators []       = []
-
+addLineIndicators [] = []
 
 cursorPosition :: Editor -> (Int, Int)
 cursorPosition e =
@@ -86,7 +86,6 @@ additionalLength length limit = (length - limit * remainder, remainder)
   where
     remainder = length `quot` limit
 
--- TODO: Add missing cases
 handleEditorEvent :: B.BrickEvent UI.UIResource e -> Editor -> Editor
 handleEditorEvent (B.VtyEvent ev) =
   case ev of
@@ -105,26 +104,24 @@ handleEditorEvent (B.VtyEvent ev) =
     V.EvKey (V.KChar 'e') [V.MCtrl] -> applyEdit moveToScreenStart
     V.EvKey (V.KChar 'd') [V.MCtrl] -> applyEdit moveToScreenEnd
     V.EvKey (V.KChar 'p') [V.MCtrl] -> applyEdit $ moveUntilNotSpace . moveUntilSpace . moveRight
-      where
-        space = S.charWnoAttrs ' '
-        moveUntilSpace = moveRightUntil (space ==) True
-        moveUntilNotSpace = moveRightUntil (not . (space  ==)) False
+      where space = S.charWnoAttrs ' '
+            moveUntilSpace = moveRightUntil (space ==) True
+            moveUntilNotSpace = moveRightUntil (not . (space ==)) False
     V.EvKey (V.KChar 'o') [V.MCtrl] -> applyEdit $ moveUntilSpace . moveUntilNotSpace . moveLeft
-      where
-        space = S.charWnoAttrs ' '
-        moveUntilSpace = moveLeftUntil (space ==) True
-        moveUntilNotSpace = moveLeftUntil (not . (space  ==)) False
+      where space = S.charWnoAttrs ' '
+            moveUntilSpace = moveLeftUntil (space ==) True
+            moveUntilNotSpace = moveLeftUntil (not . (space ==)) False
     -- Selection
     V.EvKey V.KLeft [V.MShift] -> applyEdit selectLeft
     V.EvKey V.KRight [V.MShift] -> applyEdit selectRight
-    V.EvKey V.KDown [V.MShift] -> applyEdit selectDown
-    V.EvKey V.KUp [V.MShift] -> applyEdit selectUp
+    V.EvKey V.KDown [V.MShift] -> handleSelectDown
+    V.EvKey V.KUp [V.MShift] -> handleSelectUp
     V.EvKey (V.KChar 'r') [V.MCtrl] -> applyEdit selectToLineStart
     V.EvKey (V.KChar 'u') [V.MCtrl] -> applyEdit selectToLineEnd
     V.EvKey (V.KChar 'a') [V.MCtrl] -> applyEdit selectAll
     -- Move content
-    V.EvKey (V.KChar 't')  [V.MCtrl] -> applyEdit moveLinesWithSelectionUp
-    V.EvKey (V.KChar 'g')  [V.MCtrl] -> applyEdit moveLinesWithSelectionDown
+    V.EvKey (V.KChar 't') [V.MCtrl] -> applyEdit moveLinesWithSelectionUp
+    V.EvKey (V.KChar 'g') [V.MCtrl] -> applyEdit moveLinesWithSelectionDown
     -- Undo/Redo
     V.EvKey (V.KChar 'z') [V.MCtrl] -> undo
     V.EvKey (V.KChar 'y') [V.MCtrl] -> redo
@@ -224,8 +221,71 @@ handleMoveUp e
       (upLineCursorLength `quot` terminalLength) * terminalLength + leftOnTerminal
     selected = selection $ contents e
 
--- TODO: Ver q onda colores cuando no tienen foco
--- TODO: Remove style (add it's logic to Cursor)
+handleSelectUp :: Editor -> Editor
+handleSelectUp e
+  | leftOnCursor >= terminalW = applyNTimes terminalW (applyEdit selectLeft) e
+  | otherwise =
+    applyNTimes
+      (leftOnCursor + 1 + nonNegative (upOnTerminal - leftOnCursor))
+      (applyEdit selectLeft)
+      e
+  where
+    terminalW = (fst . size) e - 4
+    leftOnCursor =
+      case (selection . contents) e of
+        Just (SL ss C.Right)      -> (length . left . contents) e + length ss
+        Just (ML _ _ sds C.Right) -> length sds
+        _                         -> (length . left . contents) e
+    upOnCursor =
+      case (selection . contents) e of
+        Just (ML sus [] _ C.Right) -> (length . left . contents) e + length sus
+        Just (ML _ (sl:sls) _ C.Right) -> length sl
+        _ ->
+          case (up . contents) e of
+            [] -> 0
+            _  -> (length . head . up . contents) e
+    upOnTerminal = upOnCursor `mod` terminalW
+
+handleSelectDown :: Editor -> Editor
+handleSelectDown e
+  | rightOnCursor >= terminalW = applyNTimes terminalW (applyEdit selectRight) e
+  | rightOnCursor >= terminalW - leftOnTerminal =
+    applyNTimes rightOnCursor (applyEdit selectRight) e
+  | downOnCursor >= leftOnTerminal =
+    applyNTimes (rightOnCursor + 1 + leftOnTerminal) (applyEdit selectRight) e
+  | otherwise = applyNTimes (rightOnCursor + 1 + downOnCursor) (applyEdit selectRight) e
+  where
+    terminalW = (fst . size) e - 4
+    leftOnCursor =
+      case (selection . contents) e of
+        Just (SL ss C.Right)      -> (length . left . contents) e + length ss
+        Just (ML _ _ sds C.Right) -> length sds
+        _                         -> (length . left . contents) e
+    leftOnTerminal = leftOnCursor `mod` terminalW
+    rightOnCursor =
+      case (selection . contents) e of
+        Just (SL ss C.Left)      -> (length . right . contents) e + length ss
+        Just (ML sus _ _ C.Left) -> length sus
+        _                        -> (length . right . contents) e
+    downOnCursor =
+      case (selection . contents) e of
+        Just (ML _ [] sds C.Left) -> (length . right . contents) e + length sds
+        Just (ML _ (sl:sls) _ C.Left) -> length sl
+        _ ->
+          case (down . contents) e of
+            [] -> 0
+            _  -> (length . head . down . contents) e
+
+applyNTimes :: (Num n, Ord n) => n -> (a -> a) -> a -> a
+applyNTimes 0 f x = x
+applyNTimes 1 f x = f x
+applyNTimes n f x = f (applyNTimes (n - 1) f x)
+
+nonNegative :: (Num n, Ord n) => n -> n
+nonNegative n
+  | n < 0 = 0
+  | otherwise = n
+
 applyEdit :: (C.Cursor StyleChar -> C.Cursor StyleChar) -> Editor -> Editor
 applyEdit f e = e {contents = (f . contents) e}
 
@@ -237,16 +297,16 @@ resize s e = e {size = s}
 --
 undo :: Editor -> Editor
 undo (Editor e f c s ul (u Seq.:<| us) rs saved) = Editor e f u s ul us (c : rs) (saved - 1)
-undo s                                     = s
+undo s = s
 
 redo :: Editor -> Editor
 redo (Editor e f c s ul us (r:rs) saved) = Editor e f r s ul (c Seq.<| us) rs (saved + 1)
-redo s                             = s
+redo s = s
 
 pushUndo :: Editor -> Editor
 pushUndo (Editor e f c s ul us rs saved)
   | Seq.length us == ul = Editor e f c s ul (updateUndos us) [] $ newSaved saved
-  | otherwise = Editor e f c s ul (c Seq.<| us) []  $ newSaved saved
+  | otherwise = Editor e f c s ul (c Seq.<| us) [] $ newSaved saved
   where
     updateUndos (us Seq.:|> u) = c Seq.<| us
     newSaved n
