@@ -22,32 +22,28 @@ import qualified Widget.Editor                as E
 import qualified Widget.SearchBar             as SB
 import           Widget.UIResource            as UI
 
-start :: [String] -> IO ()
-start args = do
-  case args of
-    [file] -> do
-      handle <- openFile file ReadWriteMode
-      text <- hGetContents handle
-      window <- TS.size
-      let app =
-            B.App
-            { B.appDraw = renderApp
-            , B.appStartEvent = onStart
-            , B.appHandleEvent = handleAppEvent
-            , B.appChooseCursor = B.showFirstCursor
-            , B.appAttrMap = const theMap
-            }
-          window' = getWindow window
-          initState =
-            S.newState
-              (F.makeFile file)
-              (map (map (\c -> charWnoAttrs c)) (splitOn "\n" text))
-              (TS.width window', TS.height window')
+start :: String -> IO ()
+start file = do
+  handle <- openFile file ReadWriteMode
+  text <- hGetContents handle
+  window <- TS.size
+  let app =
+        B.App
+        { B.appDraw = renderApp
+        , B.appStartEvent = onStart
+        , B.appHandleEvent = handleAppEvent
+        , B.appChooseCursor = B.showFirstCursor
+        , B.appAttrMap = const theMap
+        }
+      window' = getWindow window
+      initState =
+        S.newState
+          (F.makeFile file)
+          (map (map (\c -> charWnoAttrs c)) (splitOn "\n" text))
+          (TS.width window', TS.height window')
           -- TODO: tener en cuenta los tabs
-      eventChan <- B.newBChan 10
-      void $ B.customMain (V.mkVty V.defaultConfig) (Just eventChan) app initState
-    [] -> putStrLn noArguments
-    _ -> putStrLn tooManyArguments
+  eventChan <- B.newBChan 10
+  void $ B.customMain (V.mkVty V.defaultConfig) (Just eventChan) app initState
   where
     getWindow Nothing = TS.Window 30 30 -- Default Value
     getWindow w       = fromJust w
@@ -83,13 +79,6 @@ handleAppEvent s e =
   case focus s of
     OnEditor -> B.continue (s {editor = E.handleEditorEvent e (S.editor s)})
     OnSearchBar -> B.continue (SB.handleSearchEvent e s)
-
--- TODO: Pasar a Main.hs
-noArguments :: String
-noArguments = "No arguments"
-
-tooManyArguments :: String
-tooManyArguments = "Too many arguments"
 
 save :: State -> IO State
 save s = do

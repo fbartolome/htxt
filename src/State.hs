@@ -28,7 +28,7 @@ data State = State
   , focus     :: Focus
   }
 
-newState :: F.File -> [[StyleChar]] -> (Int,Int) -> State
+newState :: F.File -> [[StyleChar]] -> (Int, Int) -> State
 newState f tx size =
   State
   { searchBar = makeSearchBar SearchBarContent [[]]
@@ -47,7 +47,7 @@ data Editor = Editor
   , saved        :: Int
   }
 
-makeEditor :: UI.UIResource -> F.File -> [[StyleChar]] -> (Int,Int) -> Editor
+makeEditor :: UI.UIResource -> F.File -> [[StyleChar]] -> (Int, Int) -> Editor
 makeEditor n f tx s =
   Editor
   { editorName = n

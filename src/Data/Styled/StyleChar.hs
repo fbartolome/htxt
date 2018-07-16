@@ -17,9 +17,9 @@ import qualified Widget.UIResource as UI
 import qualified Data.Styled.Style as S
 
 data Attrs = Attrs
-  { selected        :: Bool
-  , searched        :: Bool
-  , lineIndicator   :: Bool
+  { selected      :: Bool
+  , searched      :: Bool
+  , lineIndicator :: Bool
   }
 
 data StyleChar = StyleChar

@@ -42,9 +42,9 @@ module Data.Cursor
   , doLeftUntil
   ) where
 
-import           Prelude hiding (Left, Right)
-import qualified Data.List.Utils as DLU
 import           Data.List.Split
+import qualified Data.List.Utils as DLU
+import           Prelude         hiding (Left, Right)
 
 data Direction = Left
                | Right
