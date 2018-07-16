@@ -80,7 +80,11 @@ onHide s = unsearched {editor = newEditor}
     unsearched = unsearch s
     p = (last . currentOccurrences . searchBar) s
     searched = (head . getLines . query . searchBar) s
-    newEditor = (editor unsearched) {contents = foldr (\c h -> selectRight h) (moveToPosition p (contents $ editor unsearched)) searched}
+    newEditor =
+      (editor unsearched)
+      { contents =
+          foldr (\c h -> selectRight h) (moveToPosition p (contents $ editor unsearched)) searched
+      }
 
 handleSearchEvent :: B.BrickEvent UI.UIResource e -> State -> State
 handleSearchEvent (B.VtyEvent ev) s =
@@ -180,13 +184,26 @@ replaceAllOccurrences s
     old = (head . getLines . query) sb
     new = (head . getLines . replaceContents) sb
 
-copy :: SearchBar -> String
-copy = toString . head . getSelectedLines . query
-
-cut :: SearchBar -> (SearchBar, String)
-cut sb = (sb {query = (deleteLeft . query) sb}, copy sb)
-
-paste :: String -> SearchBar -> SearchBar
-paste s sb = (foldl (\h x -> applyEdit (handleInsert x) h) sb firstLineOfS)
+copy :: State -> String
+copy s
+  | selected == [] = []
+  | otherwise = (toString . head) selected
   where
-    firstLineOfS = takeWhile (\x -> x /= '\n') s
+    sb = searchBar s
+    selected =
+      case (searchBarFocus sb) of
+        OnSearch  -> (getSelectedLines . query) sb
+        OnReplace -> (getSelectedLines . replaceContents) sb
+
+cut :: State -> (State, String)
+cut s
+  | copied == [] = (s, [])
+  | otherwise = (handleSearchEvent (B.VtyEvent (V.EvKey V.KBS [])) s, copy s)
+  where
+    copied = copy s
+
+paste :: String -> State -> State
+paste str s =
+  (foldl (\h x -> handleSearchEvent (B.VtyEvent (V.EvKey (V.KChar x) [])) h) s firstLineOfS)
+  where
+    firstLineOfS = takeWhile (\x -> x /= '\n') str

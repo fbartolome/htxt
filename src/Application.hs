@@ -39,15 +39,18 @@ start args = do
             }
           window' = getWindow window
           initState =
-            S.newState (F.makeFile file) (map (map (\c -> charWnoAttrs c)) (splitOn "\n" text)) (TS.width window', TS.height window')
+            S.newState
+              (F.makeFile file)
+              (map (map (\c -> charWnoAttrs c)) (splitOn "\n" text))
+              (TS.width window', TS.height window')
           -- TODO: tener en cuenta los tabs
       eventChan <- B.newBChan 10
       void $ B.customMain (V.mkVty V.defaultConfig) (Just eventChan) app initState
     [] -> putStrLn noArguments
     _ -> putStrLn tooManyArguments
-    where
-      getWindow Nothing = TS.Window 30 30 -- Default Value
-      getWindow w       = fromJust w
+  where
+    getWindow Nothing = TS.Window 30 30 -- Default Value
+    getWindow w       = fromJust w
 
 renderApp :: State -> [B.Widget UI.UIResource]
 renderApp (State sb e f) =
@@ -105,7 +108,7 @@ copy s = do
     c =
       case focus s of
         OnEditor    -> (E.copy . editor) s
-        OnSearchBar -> (SB.copy . searchBar) s
+        OnSearchBar -> SB.copy s
 
 cut :: State -> IO State
 cut (State sb e OnEditor) = do
@@ -113,11 +116,11 @@ cut (State sb e OnEditor) = do
   return (State sb newE OnEditor)
   where
     (newE, c) = E.cut e
-cut (State sb e OnSearchBar) = do
+cut s = do
   HC.setClipboard c
-  return (State newSB e OnSearchBar)
+  return newS
   where
-    (newSB, c) = SB.cut sb
+    (newS, c) = SB.cut s
 
 paste :: State -> IO State
 paste s = do
@@ -127,4 +130,4 @@ paste s = do
     newS c =
       case focus s of
         OnEditor    -> s {editor = E.paste c (editor s)}
-        OnSearchBar -> s {searchBar = SB.paste c (searchBar s)}
+        OnSearchBar -> SB.paste c s
